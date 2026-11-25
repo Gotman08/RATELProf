@@ -8,7 +8,7 @@
 #include "domains/minimal_abi/hsa_minimal_abi.h"
 
 
-#define CALL(func, ...) ((__##func##_t)hsa_api_table.api_ptr[HSA_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(hsa_api_table, HSA_API_ID_##func, #func))(__VA_ARGS__)
 
 
 hsa_signal_value_t hsa_signal_exchange_screlease(hsa_signal_t signal, hsa_signal_value_t value) {

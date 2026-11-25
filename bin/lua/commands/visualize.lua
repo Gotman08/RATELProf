@@ -52,8 +52,7 @@ function visualize.process(positional_args, options_values)
     rprofvis:write_jsfile(fs)
 
     fs.data.misc:write([[document.title = document.title + " - ]], ratelprof.fs.basename(output), [[";]],
-                       "
-", [[window.RPROF_VENDOR = "]], ratelprof.consts._VENDOR, [[";]])
+                       "\n", [[window.RPROF_VENDOR = "]], ratelprof.consts._VENDOR, [[";]])
 
     Message:print("RPROF: HTML report written in '" .. output .. "' dir.")
     Message:print("RPROF: Index file can be found at '" .. output .. "/index.html'.")

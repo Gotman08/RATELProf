@@ -289,4 +289,17 @@ ratelprof_status_t ratelprof_disable_api_table(ratelprof_api_table_t* api_table)
  */
 void fallback(void);
 
+/**
+ * @brief Resolve @p funame in the libraries loaded after RATELProf (RTLD_NEXT).
+ *
+ * Used by the interposition wrappers when they are called before their API
+ * table is populated, e.g. by another library's constructor (libomptarget
+ * initializes libomp, whose OMPT tool calls OpenMP routines, before the
+ * RATELProf constructor has run).
+ */
+void* ratelprof_api_next_symbol(const char* funame);
+
+/** Active function pointer of an API table entry, safe before population. */
+#define RATELPROF_API_PTR(table, id, funame)     (__builtin_expect((table).is_populate, 1) ? (table).api_ptr[id] : ratelprof_api_next_symbol(funame))
+
 #endif // RATELPROF_API_TABLE_H

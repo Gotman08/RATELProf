@@ -37,7 +37,31 @@ static _Atomic size_t global_id_counter = 1;
 static pthread_key_t thread_stack_key;
 
 #define RATELPROF_CHILD_BIT (1ULL << 63)
-#define RATELPROF_ID_MASK   (~RATELPROF_CHILD_BIT)
+/* Weak entries are ranges (NVTX) whose end is not guaranteed to be reported:
+ * when the event enclosing them ends first, they are closed implicitly. */
+#define RATELPROF_WEAK_BIT  (1ULL << 62)
+#define RATELPROF_ID_MASK   (~(RATELPROF_CHILD_BIT | RATELPROF_WEAK_BIT))
+
+static ratelprof_weak_id_handler_t weak_id_handler = NULL;
+
+void ratelprof_set_weak_id_handler(ratelprof_weak_id_handler_t handler)
+{
+    weak_id_handler = handler;
+}
+
+/* Close implicitly the weak entries left above index @p floor of stack @p s
+ * (ranges opened inside an event that has just ended and never closed). */
+static void close_weak_entries_above(ratelprof_stack_t* s, int floor)
+{
+    while (s->top > floor && (s->items[s->top] & RATELPROF_WEAK_BIT)) {
+        uint64_t event = s->items[s->top--];
+        uint64_t* parent = &s->items[s->top];
+        uint64_t parent_id = *parent & RATELPROF_ID_MASK;
+        if (parent_id != 0) *parent |= RATELPROF_CHILD_BIT;
+        if (weak_id_handler)
+            weak_id_handler(event & RATELPROF_ID_MASK, parent_id, (event & RATELPROF_CHILD_BIT) != 0);
+    }
+}
 
 // Destructor function that will be called when the thread exits
 void cleanup_stack(void* s)
@@ -114,6 +138,9 @@ ratelprof_status_t get_correlation_id(uint64_t *corr_id, bool* has_children)
         LOG(LOG_LEVEL_FATAL, "Failed to get thread specific ID stack. %s (code %d)\n", get_error_string(status), status)
     );
 
+    /* Ranges opened inside this event and still open end with it. */
+    close_weak_entries_above(s, 0);
+
     RATELPROF_TRY(
         ratelprof_stack_pop(s, &event),
         LOG(LOG_LEVEL_ERROR, "Failed to pop an ID from stack. %s (code %d)\n", get_error_string(status), status)
@@ -159,6 +186,51 @@ ratelprof_status_t ratelprof_mark_current_has_children(void)
     RATELPROF_TRY(ratelprof_stack_peek(s, &top));
     if ((*top & RATELPROF_ID_MASK) != 0) *top |= RATELPROF_CHILD_BIT;
     return status;
+}
+
+// Push a weak ID (a range that may never be closed explicitly, see above).
+ratelprof_status_t ratelprof_get_weak_id(uint64_t *id)
+{
+    ratelprof_stack_t* s;
+
+    RATELPROF_TRY(
+        get_thread_stack(&s),
+        LOG(LOG_LEVEL_FATAL, "Failed to get thread specific ID stack. %s (code %d)\n", get_error_string(status), status)
+    );
+    *id = atomic_fetch_add_explicit(&global_id_counter, 1, memory_order_relaxed) & RATELPROF_ID_MASK;
+    RATELPROF_TRY(
+        ratelprof_stack_push(s, *id | RATELPROF_WEAK_BIT),
+        LOG(LOG_LEVEL_ERROR, "Failed to push an ID onto stack. %s (code %d)\n", get_error_string(status), status)
+    );
+    return RATELPROF_STATUS_SUCCESS;
+}
+
+// Close a specific event of the current thread stack, even when it is not on
+// top. NVTX ranges are only nested per domain: closing by ID keeps the
+// parent/child links consistent. Weak entries opened inside it end with it.
+ratelprof_status_t ratelprof_close_id(uint64_t id, uint64_t* corr_id, bool* has_children)
+{
+    ratelprof_stack_t* s;
+
+    *corr_id = 0;
+    if (has_children) *has_children = false;
+    RATELPROF_TRY(
+        get_thread_stack(&s),
+        LOG(LOG_LEVEL_FATAL, "Failed to get thread specific ID stack. %s (code %d)\n", get_error_string(status), status)
+    );
+    id &= RATELPROF_ID_MASK;
+    for (int i = s->top; i > 0; i--) {
+        if ((s->items[i] & RATELPROF_ID_MASK) != id) continue;
+        close_weak_entries_above(s, i);
+        if (has_children) *has_children = (s->items[i] & RATELPROF_CHILD_BIT) != 0;
+        uint64_t* parent = &s->items[i - 1];
+        *corr_id = *parent & RATELPROF_ID_MASK;
+        if (*corr_id != 0) *parent |= RATELPROF_CHILD_BIT;
+        for (int j = i; j < s->top; j++) s->items[j] = s->items[j + 1];
+        s->top--;
+        return RATELPROF_STATUS_SUCCESS;
+    }
+    return RATELPROF_STATUS_STACK_IS_EMPTY;
 }
 
 // Initialize the thread-local storage for the stack

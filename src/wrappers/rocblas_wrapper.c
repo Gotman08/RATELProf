@@ -9,7 +9,7 @@
 #include "domains/minimal_abi/rocblas_minimal_abi.h"
 
 
-#define CALL(func, ...) ((__##func##_t)rocblas_api_table.api_ptr[ROCBLAS_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(rocblas_api_table, ROCBLAS_API_ID_##func, #func))(__VA_ARGS__)
 
 
 _Bool rocblas_is_user_managing_device_memory(rocblas_handle handle) {

@@ -25,6 +25,18 @@ static inline uint64_t nv_norm(ratelprof_time_t t)
     return t ? ratelprof_get_normalized_monotonic_time(t) : 0;
 }
 
+/* CUpti_ActivitySynchronizationType values. */
+static const char* nv_sync_name(uint32_t type)
+{
+    switch (type) {
+        case 1:  return "Event Synchronize";
+        case 2:  return "Stream Wait Event";
+        case 3:  return "Stream Synchronize";
+        case 4:  return "Context Synchronize";
+        default: return "Synchronization";
+    }
+}
+
 static void add_memory_activity_data_to_buffer(
     rprofrep_encode_context_t* ctx,
     ratelprof_domain_t domain,
@@ -92,6 +104,8 @@ static void add_barrier_activity_data_to_buffer(
     msgpack_encode_uint(evt, nv_norm(activity->start_time));
     msgpack_encode_uint(evt, dur);
     rprofrep_msgpack_ext_encode_cid(evt, activity->corr_id);
+    /* Name of the synchronization kind (decoded as the event name / ufunid). */
+    rprofrep_msgpack_ext_encode_string(ctx, evt, nv_sync_name(activity->args.sync.type));
 
     msgpack_encode_uint(evt, activity->cupti_corr_id);
     msgpack_encode_uint(evt, nv_norm(activity->start_time));

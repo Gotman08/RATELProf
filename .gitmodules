@@ -1,12 +1,15 @@
 [submodule "external/liborkh"]
 	path = external/liborkh
-	url =  https://github.com/Kassouley/liborkh.git
+	url = https://github.com/Gotman08/liborkh.git
+	branch = nvidia-port
 [submodule "external/lsgpu"]
 	path = external/lsgpu
-	url =  https://github.com/Kassouley/lsgpu.git
+	url = https://github.com/Gotman08/lsgpu.git
+	branch = nvidia-port
 [submodule "external/RATELProf-Visualize"]
 	path = external/RATELProf-Visualize
-	url =  https://github.com/Kassouley/RATELProf-Visualize.git
+	url = https://github.com/Gotman08/RATELProf-Visualize.git
+	branch = nvidia-port
 [submodule "external/RATELMonitor"]
 	path = external/RATELMonitor
 	url = https://github.com/Kassouley/RATELMonitor.git

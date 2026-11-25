@@ -8,7 +8,7 @@
 #include "domains/minimal_abi/omp_tgt_minimal_abi.h"
 
 
-#define CALL(func, ...) ((__##func##_t)omp_routine_api_table.api_ptr[OMP_ROUTINE_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(omp_routine_api_table, OMP_ROUTINE_API_ID_##func, #func))(__VA_ARGS__)
 
 
 void * omp_target_memset(void * ptr, int value, size_t size, int device_num) {

@@ -1,5 +1,6 @@
 local options_helper = require ("options_helper")
 local liborkh = require("liborkh_lua")
+local inspect_nvidia = ratelprof.consts.IS_NVIDIA and require ("commands.inspect_nvidia") or nil
 
 local inspect = {}
 
@@ -30,6 +31,16 @@ end
 
 
 function inspect.get_kernel_number(binary_app, quiet)
+    if inspect_nvidia then
+        -- NVIDIA: kernels of the application binary itself (CUDA libraries such as
+        -- cuBLAS embed thousands of kernels, this value only sizes a hash table).
+        local n = inspect_nvidia.get_kernel_number(binary_app)
+        if n == 0 and not quiet then
+            Message:warn("No CUDA kernel found in '" .. binary_app .. "' (kernels may be JIT compiled or in libraries).")
+        end
+        if not quiet then print("RPROF: Found "..n.." kernels in binary.") end
+        return n
+    end
     local res = iterate_linked_lib(binary_app, function(bin)
         return liborkh.get_kernel_count(bin, { id_mode = 1 })
     end)
@@ -112,14 +123,14 @@ local function inspect_kernels(application, opt)
             table.insert(csv_entries, table.concat(kernel_entry, ", "))
         end
 
-        local output_file_csv = ratelprof.fs.concat_path(output_dir, "inspect_"..id..".csv")
+        local output_file_csv = ratelprof.fs.join(output_dir, "inspect_"..id..".csv")
         local file = ratelprof.fs.open_file(output_file_csv, "w")
         file:write(table.concat(csv_entries, "\n")) 
         file:close()
         Message:print("RPROF: CSV output written to " .. output_file_csv)
 
         if save_json then
-            local output_file_json = ratelprof.fs.concat_path(output_dir, "inspect_"..id..".json")
+            local output_file_json = ratelprof.fs.join(output_dir, "inspect_"..id..".json")
             local json_output = ratelprof.utils.generate_json(application_metadata)
             local f = ratelprof.fs.open_file(output_file_json, "w")
             f:write(json_output)
@@ -132,6 +143,10 @@ end
 
 function inspect.process(positional_args, opt)
     local application = ratelprof.get_bin_val(positional_args)
+    if inspect_nvidia then
+        inspect_nvidia.inspect_kernels(application, opt, options_helper)
+        return
+    end
     inspect_kernels(application, opt)
 end
 

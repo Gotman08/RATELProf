@@ -233,4 +233,28 @@ uint64_t ratelprof_new_id(void);
  */
 ratelprof_status_t ratelprof_mark_current_has_children(void);
 
+/**
+ * @brief Close the event @p id of the current thread ID stack wherever it is.
+ *
+ * Same outputs as get_correlation_id(), but the event does not need to be on
+ * top of the stack (used for NVTX ranges, which are only nested per domain).
+ */
+ratelprof_status_t ratelprof_close_id(uint64_t id, uint64_t* corr_id, bool* has_children);
+
+/**
+ * @brief Push a new *weak* event ID on the current thread ID stack.
+ *
+ * A weak event is a range whose end may never be reported (an NVTX range a
+ * library pushes and never pops). If the event enclosing it ends first, the
+ * weak event is removed from the stack and reported to the weak ID handler,
+ * so that it can be closed at that time instead of corrupting the stack.
+ */
+ratelprof_status_t ratelprof_get_weak_id(uint64_t *id);
+
+/** Called (in the owning thread) for each weak event closed implicitly. */
+typedef void (*ratelprof_weak_id_handler_t)(uint64_t id, uint64_t corr_id, bool has_children);
+
+/** Register the handler closing weak events implicitly (NULL to disable). */
+void ratelprof_set_weak_id_handler(ratelprof_weak_id_handler_t handler);
+
 #endif // RATELPROF_ID_SYSTEM_H

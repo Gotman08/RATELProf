@@ -8,7 +8,7 @@
 #include "domains/minimal_abi/mpi_minimal_abi.h"
 
 
-#define CALL(func, ...) ((__##func##_t)mpi_api_table.api_ptr[MPI_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(mpi_api_table, MPI_API_ID_##func, #func))(__VA_ARGS__)
 
 
 MPI_Comm MPI_Comm_f2c(int comm) {

@@ -71,6 +71,17 @@ install_dir = resolve_env_var(install_dir:gsub("/$", "") .. "/ratelprof")
 local build_dir = "build"
 add_cmake_option("CMAKE_INSTALL_PREFIX", install_dir)
 
+-- GPU vendor (AMD by default, NVIDIA for the CUPTI backend). Optional keys.
+local function get_optional_value(section, key)
+    local t = config[section]
+    if type(t) ~= "table" then return nil end
+    return t[key]
+end
+local gpu_vendor = get_optional_value("options", "gpu_vendor") or os.getenv("RATELPROF_GPU_VENDOR")
+add_cmake_option("RATELPROF_GPU_VENDOR", gpu_vendor)
+local cuda_root = get_optional_value("options", "cuda_root")
+if cuda_root then add_cmake_option("RATELPROF_CUDA_ROOT", resolve_env_var(cuda_root)) end
+
 -- Toolchain
 local cc_compiler       = get_json_value("toolchain", "CC")
 local cxx_compiler      = get_json_value("toolchain", "CXX")

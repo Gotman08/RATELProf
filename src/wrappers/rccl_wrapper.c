@@ -11,7 +11,7 @@
 #include "domains/minimal_abi/rccl_minimal_abi.h"
 
 
-#define CALL(func, ...) ((__##func##_t)rccl_api_table.api_ptr[RCCL_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(rccl_api_table, RCCL_API_ID_##func, #func))(__VA_ARGS__)
 
 
 const char * ncclGetLastError(ncclComm_t comm) {

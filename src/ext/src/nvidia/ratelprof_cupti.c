@@ -247,7 +247,15 @@ static void rp_on_api(ratelprof_domain_t domain, CUpti_CallbackId cbid, const CU
 /* ------------------------------------------------------------------------- */
 
 #define RP_NVTX_STACK_CAPACITY 1024
-static __thread ratelprof_stack_t rp_nvtx_stack = {0};
+#define RP_NVTX_MAX_DOMAINS    16
+
+typedef struct {
+    nvtxDomainHandle_t domain;   /* NULL for the default domain */
+    ratelprof_stack_t  stack;    /* open ratelprof_roctx_activity_t* */
+} rp_nvtx_domain_stack_t;
+
+static __thread rp_nvtx_domain_stack_t rp_nvtx_stacks[RP_NVTX_MAX_DOMAINS];
+static __thread int rp_nvtx_nstacks = 0;
 
 static char* rp_strdup_wide(const wchar_t* w)
 {
@@ -272,13 +280,11 @@ static char* rp_nvtx_message(const nvtxEventAttributes_t* a, nvtxDomainHandle_t 
             case NVTX_MESSAGE_TYPE_UNICODE:
                 msg = rp_strdup_wide(a->message.unicode);
                 break;
-#ifdef NVTX_MESSAGE_TYPE_REGISTERED
-            case NVTX_MESSAGE_TYPE_REGISTERED: {
+            case NVTX_MESSAGE_TYPE_REGISTERED: { /* enum value, not a macro */
                 const char* s = (const char*)cht_get(g.nvtx_strings, (uint64_t)(uintptr_t)a->message.registered);
                 msg = strdup(s ? s : "<registered string>");
                 break;
             }
-#endif
             default:
                 msg = strdup("<nvtx>");
         }
@@ -310,23 +316,63 @@ static ratelprof_roctx_activity_t* rp_nvtx_new_activity(char* message)
     return act;
 }
 
-static void rp_nvtx_push(char* message)
+/* NVTX push/pop ranges are nested per thread *and per domain*: a pop on the
+ * default domain must not close a range a library pushed on its own domain
+ * (NCCL, for instance, never pops its ncclCommInitAll range). */
+static ratelprof_stack_t* rp_nvtx_stack_of(nvtxDomainHandle_t domain, bool create)
 {
-    if (rp_nvtx_stack.capacity == 0) ratelprof_stack_init(&rp_nvtx_stack, RP_NVTX_STACK_CAPACITY);
+    for (int i = 0; i < rp_nvtx_nstacks; i++)
+        if (rp_nvtx_stacks[i].domain == domain) return &rp_nvtx_stacks[i].stack;
+    if (!create || rp_nvtx_nstacks == RP_NVTX_MAX_DOMAINS) return NULL;
+    rp_nvtx_domain_stack_t* ds = &rp_nvtx_stacks[rp_nvtx_nstacks];
+    if (ratelprof_stack_init(&ds->stack, RP_NVTX_STACK_CAPACITY) != RATELPROF_STATUS_SUCCESS) return NULL;
+    ds->domain = domain;
+    rp_nvtx_nstacks++;
+    return &ds->stack;
+}
+
+static void rp_nvtx_push(char* message, nvtxDomainHandle_t domain)
+{
+    ratelprof_stack_t* st = rp_nvtx_stack_of(domain, true);
+    if (!st || ratelprof_stack_is_full(st)) { free(message); return; }
     ratelprof_roctx_activity_t* act = rp_nvtx_new_activity(message);
-    ratelprof_stack_push(&rp_nvtx_stack, (uint64_t)(uintptr_t)act);
-    get_id(&act->id);                 /* nested events get this range as parent */
+    ratelprof_stack_push(st, (uint64_t)(uintptr_t)act);
+    /* Nested events get this range as parent. Weak: if the event enclosing the
+     * range ends before it is popped, the range is closed with it. */
+    ratelprof_get_weak_id(&act->id);
     act->start_time = ratelprof_get_clock_now();
 }
 
-static void rp_nvtx_pop(void)
+/* Weak ID handler: a range was left open by the event that enclosed it (NCCL
+ * pushes a range in ncclCommInitAll and never pops it): close it now. */
+static void rp_nvtx_weak_closed(uint64_t id, uint64_t corr_id, bool has_children)
+{
+    for (int i = 0; i < rp_nvtx_nstacks; i++) {
+        ratelprof_stack_t* st = &rp_nvtx_stacks[i].stack;
+        for (int j = st->top; j >= 0; j--) {
+            ratelprof_roctx_activity_t* act = (ratelprof_roctx_activity_t*)(uintptr_t)st->items[j];
+            if (!act || act->id != id) continue;
+            for (int k = j; k < st->top; k++) st->items[k] = st->items[k + 1];
+            st->top--;
+            act->stop_time = ratelprof_get_clock_now();
+            act->corr_id = corr_id;
+            act->has_children = has_children;
+            ratelprof_activity_pool_push_activity(act);
+            return;
+        }
+    }
+}
+
+static void rp_nvtx_pop(nvtxDomainHandle_t domain)
 {
     uint64_t popped = 0;
-    if (rp_nvtx_stack.capacity == 0) return;
-    if (ratelprof_stack_pop(&rp_nvtx_stack, &popped) != RATELPROF_STATUS_SUCCESS || !popped) return;
+    ratelprof_stack_t* st = rp_nvtx_stack_of(domain, false);
+    if (!st || ratelprof_stack_pop(st, &popped) != RATELPROF_STATUS_SUCCESS || !popped) return;
     ratelprof_roctx_activity_t* act = (ratelprof_roctx_activity_t*)(uintptr_t)popped;
     act->stop_time = ratelprof_get_clock_now();
-    get_correlation_id(&act->corr_id, &act->has_children);
+    /* The range may not be on top of the ID stack if another domain left a
+     * range open inside it: close it by ID. */
+    ratelprof_close_id(act->id, &act->corr_id, &act->has_children);
     ratelprof_activity_pool_push_activity(act);
 }
 
@@ -377,12 +423,20 @@ static void rp_on_nvtx(CUpti_CallbackId cbid, const CUpti_NvtxData* d)
             return;
         case CUPTI_CBID_NVTX_nvtxDomainRegisterStringW:
             if (r && p) cht_set(g.nvtx_strings, (uint64_t)(uintptr_t)*(const nvtxStringHandle_t*)r,
-                                rp_strdup_wide(((const nvtxDomainRegisterStringW_params*)p)->string));
+                                rp_strdup_wide((const wchar_t*)((const nvtxDomainRegisterStringW_params*)p)->string));
             return;
         default: break;
     }
 
-    if (!g.enabled[RATELPROF_DOMAIN_NVTX] || !p) return;
+    if (!g.enabled[RATELPROF_DOMAIN_NVTX]) return;
+
+    /* nvtxRangePop has no parameter struct: CUPTI may hand us NULL params. */
+    if (cbid == CUPTI_CBID_NVTX_nvtxRangePop) { rp_nvtx_pop(NULL); return; }
+    if (cbid == CUPTI_CBID_NVTX_nvtxDomainRangePop) {
+        rp_nvtx_pop(p ? ((const nvtxDomainRangePop_params*)p)->domain : NULL);
+        return;
+    }
+    if (!p) return;
 
     switch (cbid) {
         case CUPTI_CBID_NVTX_nvtxMarkA:
@@ -400,23 +454,19 @@ static void rp_on_nvtx(CUpti_CallbackId cbid, const CUpti_NvtxData* d)
             break;
         }
         case CUPTI_CBID_NVTX_nvtxRangePushA:
-            rp_nvtx_push(strdup(((const nvtxRangePushA_params*)p)->message));
+            rp_nvtx_push(strdup(((const nvtxRangePushA_params*)p)->message), NULL);
             break;
         case CUPTI_CBID_NVTX_nvtxRangePushW:
-            rp_nvtx_push(rp_strdup_wide(((const nvtxRangePushW_params*)p)->message));
+            rp_nvtx_push(rp_strdup_wide(((const nvtxRangePushW_params*)p)->message), NULL);
             break;
         case CUPTI_CBID_NVTX_nvtxRangePushEx:
-            rp_nvtx_push(rp_nvtx_message(((const nvtxRangePushEx_params*)p)->eventAttrib, NULL));
+            rp_nvtx_push(rp_nvtx_message(((const nvtxRangePushEx_params*)p)->eventAttrib, NULL), NULL);
             break;
         case CUPTI_CBID_NVTX_nvtxDomainRangePushEx: {
             const nvtxDomainRangePushEx_params* q = (const nvtxDomainRangePushEx_params*)p;
-            rp_nvtx_push(rp_nvtx_message(q->core.eventAttrib, q->domain));
+            rp_nvtx_push(rp_nvtx_message(q->core.eventAttrib, q->domain), q->domain);
             break;
         }
-        case CUPTI_CBID_NVTX_nvtxRangePop:
-        case CUPTI_CBID_NVTX_nvtxDomainRangePop:
-            rp_nvtx_pop();
-            break;
         case CUPTI_CBID_NVTX_nvtxRangeStartA:
             if (r) rp_nvtx_range_start(strdup(((const nvtxRangeStartA_params*)p)->message), *(const nvtxRangeId_t*)r);
             break;
@@ -794,6 +844,7 @@ ratelprof_status_t ratelprof_cupti_start(void)
         g.ts_offset = (int64_t)c0 - (int64_t)((m0 + m1) / 2);
     }
 
+    ratelprof_set_weak_id_handler(rp_nvtx_weak_closed);
     ratelprof_clock_t t0 = ratelprof_get_clock_now();
     RP_CUPTI_CALL(cuptiSubscribe(&g.subscriber, (CUpti_CallbackFunc)rp_cupti_callback, NULL));
     g.subscribed = true;
@@ -827,6 +878,7 @@ ratelprof_status_t ratelprof_cupti_start(void)
 
 ratelprof_status_t ratelprof_cupti_stop(void)
 {
+    ratelprof_set_weak_id_handler(NULL);
     if (g.activity_enabled) {
         ratelprof_clock_t t0 = ratelprof_get_clock_now();
         cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED);

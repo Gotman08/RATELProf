@@ -29,13 +29,18 @@ command_exists() {
     which "$1" >/dev/null 2>&1
 }
 
-# Determine which Lua interpreter to use
-if command_exists luajit; then
-    LUA_EXEC="$(command -v luajit)"
-elif command_exists lua; then
-    LUA_EXEC="$(command -v lua)"
-else
-    echo "Error: Neither LuaJIT nor Lua is installed."
+# Determine which Lua interpreter to use (the C modules are built for Lua 5.1)
+LUA_EXEC=""
+for candidate in luajit lua5.1 lua51 lua-5.1 lua; do
+    if command_exists "$candidate"; then
+        if [ "$candidate" = "luajit" ] || "$candidate" -v 2>&1 | grep -q "Lua 5\.1"; then
+            LUA_EXEC="$(command -v "$candidate")"
+            break
+        fi
+    fi
+done
+if [ -z "$LUA_EXEC" ]; then
+    echo "Error: RATELProf needs LuaJIT or Lua 5.1 (found: $(lua -v 2>&1 | head -1))."
     exit 1
 fi
 

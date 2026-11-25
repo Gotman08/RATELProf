@@ -8,7 +8,7 @@
 #include "domains/minimal_abi/hip_minimal_abi.h"
 
 
-#define CALL(func, ...) ((__##func##_t)hip_api_table.api_ptr[HIP_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(hip_api_table, HIP_API_ID_##func, #func))(__VA_ARGS__)
 
 
 hipError_t hipGraphExecKernelNodeSetParams(hipGraphExec_t hGraphExec, hipGraphNode_t node, const hipKernelNodeParams * pNodeParams) {

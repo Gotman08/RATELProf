@@ -32,6 +32,11 @@ ratelprof_status_t ratelprof_init_api_table(ratelprof_domain_t domain, ratelprof
     return RATELPROF_STATUS_SUCCESS;
 }
 
+void* ratelprof_api_next_symbol(const char* funame)
+{
+    return dlsym(RTLD_NEXT, funame);
+}
+
 ratelprof_status_t ratelprof_populate_api_table(ratelprof_api_table_t* api_table, const char* lib_path)
 {
     void* handler = RTLD_NEXT;

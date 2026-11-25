@@ -36,15 +36,14 @@ rprofrep_status_t rprofrep_find_entry_point_event(
     rprofrep_event_data_t last_matching_event;
     bool found_match = false;
 
-    // Walk up the parent chain
-    while (current_event.cid != 0) {
-        RPROFREP_CHECK_CALL(
-            rprofrep_get_event_by_cid(
-                ctx,
-                current_event.cid,
-                &parent_event
-            )
-        );
+    // Walk up the parent chain. Stop on a parent missing from the report (a
+    // range that was never closed) or on a corrupted (cyclic) link instead of
+    // failing or looping forever.
+    for (int depth = 0; current_event.cid != 0 && depth < 4096; depth++) {
+        if (current_event.cid == current_event.id) break;
+        rprofrep_status_t st = rprofrep_get_event_by_cid(ctx, current_event.cid, &parent_event);
+        if (st.code == RPROFREP_STATUS_CODE_NOT_FOUND || !parent_event.valid) break;
+        if (st.code != RPROFREP_STATUS_CODE_SUCCESS) return st;
         current_event = parent_event;
         if (domain_filter != -1 && current_event.domain == domain_filter) {
             last_matching_event = current_event;
@@ -185,7 +184,14 @@ rprofrep_status_t rprofrep_get_event(
         unique_funid = out_event->extra.kernel_data->kernel_strid;
 
     } else {
+#ifdef RATELPROF_VENDOR_NVIDIA
+        /* NVIDIA synchronizations carry their kind as a string (see encoder). */
+        extra_id = __read_mp_uint(event_buf, &offset);
+        RPROFREP_CHECK_CALL(rprofrep_get_string_by_id(ctx, extra_id, &name));
+        unique_funid = extra_id;
+#else
         name = "Barrier";
+#endif
     }
 
     if (cursor) *cursor = next_event_off;

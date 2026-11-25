@@ -26,7 +26,7 @@ ratelprof_object_tracking_pool_init()
     // uint32_t max_queues_av = envtoi("RATELPROF_MAX_QUEUE_AVAILABLE", 256);
     uint32_t max_agents_av = envtoi("RATELPROF_MAX_AGENT_AVAILABLE", 256);
 
-    ratelprof_object_tracking_pool_t* otp = (ratelprof_object_tracking_pool_t*)malloc(sizeof(ratelprof_object_tracking_pool_t));
+    ratelprof_object_tracking_pool_t* otp = (ratelprof_object_tracking_pool_t*)calloc(1, sizeof(ratelprof_object_tracking_pool_t)); /* nagents and maps must start at 0 */
     if (!otp) return RATELPROF_STATUS_MALLOC_FAILED;
 
     otp->is_barrier_packet_tracked = is_set_domain("RATELPROF_DOMAIN_BARRIERAND") && is_set_domain("RATELPROF_DOMAIN_BARRIEROR");

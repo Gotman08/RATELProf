@@ -8,7 +8,7 @@
 #include "domains/minimal_abi/omp_tgt_rtl_minimal_abi.h"
 
 
-#define CALL(func, ...) ((__##func##_t)omp_tgt_rtl_api_table.api_ptr[OMP_TGT_RTL_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(omp_tgt_rtl_api_table, OMP_TGT_RTL_API_ID_##func, #func))(__VA_ARGS__)
 
 
 int32_t __tgt_rtl_query_async(int32_t device_id, __tgt_async_info * AsyncInfoPtr) {

@@ -658,8 +658,12 @@ static int l_context_get_correlated_event(lua_State* L) {
     rprofrep_event_data_t* cid_event = NULL;
     rprofrep_event_data_t tmp = {0};
 
-    rprofrep_lua_check(L, rprofrep_get_event_by_cid(ctx, e->cid, &tmp),
-        "failed to get event from cid %lu", e->cid);
+    rprofrep_status_t st = rprofrep_get_event_by_cid(ctx, e->cid, &tmp);
+    if (st.code == RPROFREP_STATUS_CODE_NOT_FOUND) {   /* parent not in the report */
+        lua_pushnil(L);
+        return 1;
+    }
+    rprofrep_lua_check(L, st, "failed to get event from cid %lu", e->cid);
 
     if (!tmp.valid) {
         lua_pushnil(L);

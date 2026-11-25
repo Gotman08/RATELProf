@@ -7,7 +7,7 @@
 
 typedef uint64_t roctx_range_id_t;
 
-#define CALL(func, ...) ((__##func##_t)roctx_api_table.api_ptr[ROCTX_API_ID_##func])(__VA_ARGS__)
+#define CALL(func, ...) ((__##func##_t)RATELPROF_API_PTR(roctx_api_table, ROCTX_API_ID_##func, #func))(__VA_ARGS__)
 
 int roctxRangePushA(const char* message) {
     return CALL(roctxRangePushA, message, __builtin_return_address(0));
