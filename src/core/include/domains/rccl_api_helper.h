@@ -18,7 +18,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include "domains/fun_proto/rccl_profiled_functions.h"
+#ifndef RATELPROF_VENDOR_NVIDIA
 #include "domains/minimal_abi/hip_minimal_abi.h"
+#endif
 #include "domains/minimal_abi/rccl_minimal_abi.h" 
 
 #define RCCL_STRING_SIZE_MAX 128
@@ -289,7 +291,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			int root (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -298,7 +300,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	int root;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclBcast_t;
 
@@ -309,7 +311,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->root = (int) root; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -345,7 +347,7 @@ typedef struct {
  *			size_t count (unsigned long)
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -354,7 +356,7 @@ typedef struct {
 	size_t count;
 	ncclDataType_t datatype;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclAllToAll_t;
 
@@ -365,7 +367,7 @@ typedef struct {
 	args->count = (size_t) count; \
 	args->datatype = (ncclDataType_t) datatype; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -384,7 +386,7 @@ typedef struct {
  *			size_t sendcount (unsigned long)
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -393,7 +395,7 @@ typedef struct {
 	size_t sendcount;
 	ncclDataType_t datatype;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclAllGather_t;
 
@@ -404,7 +406,7 @@ typedef struct {
 	args->sendcount = (size_t) sendcount; \
 	args->datatype = (ncclDataType_t) datatype; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -547,7 +549,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			int peer (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -556,7 +558,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	int peer;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclRecv_t;
 
@@ -567,7 +569,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->peer = (int) peer; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -668,7 +670,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			int root (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -678,7 +680,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	int root;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclScatter_t;
 
@@ -690,7 +692,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->root = (int) root; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -1078,7 +1080,7 @@ typedef struct {
  *			ncclRedOp_t op (enum ncclRedOp_t)
  *			mscclAlgoHandle_t mscclAlgoHandle (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1107,7 +1109,7 @@ typedef struct {
 	ncclRedOp_t op;
 	mscclAlgoHandle_t mscclAlgoHandle;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_mscclRunAlgo_t;
 
@@ -1126,7 +1128,7 @@ typedef struct {
 	args->op = (ncclRedOp_t) op; \
 	args->mscclAlgoHandle = (mscclAlgoHandle_t) mscclAlgoHandle; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 #define GET_PTRS_VALUE_mscclRunAlgo(args) { \
@@ -1245,7 +1247,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			ncclRedOp_t op (enum ncclRedOp_t)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1255,7 +1257,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	ncclRedOp_t op;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclAllReduce_t;
 
@@ -1267,7 +1269,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->op = (ncclRedOp_t) op; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -1323,7 +1325,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			int root (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1333,7 +1335,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	int root;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclBroadcast_t;
 
@@ -1345,7 +1347,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->root = (int) root; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -1367,7 +1369,7 @@ typedef struct {
  *			const size_t[] rdispls (const unsigned long[])
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1391,7 +1393,7 @@ typedef struct {
 	} rdispls__ref;
 	ncclDataType_t datatype;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclAllToAllv_t;
 
@@ -1405,7 +1407,7 @@ typedef struct {
 	args->rdispls = (size_t(*)) rdispls; \
 	args->datatype = (ncclDataType_t) datatype; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 #define GET_PTRS_VALUE_ncclAllToAllv(args) { \
@@ -1582,7 +1584,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			ncclRedOp_t op (enum ncclRedOp_t)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1592,7 +1594,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	ncclRedOp_t op;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclReduceScatter_t;
 
@@ -1604,7 +1606,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->op = (ncclRedOp_t) op; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -1624,7 +1626,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			int root (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1634,7 +1636,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	int root;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclGather_t;
 
@@ -1646,7 +1648,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->root = (int) root; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -1692,7 +1694,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			int peer (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1701,7 +1703,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	int peer;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclSend_t;
 
@@ -1712,7 +1714,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->peer = (int) peer; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**
@@ -1808,7 +1810,7 @@ typedef struct {
  *			ncclDataType_t datatype (enum ncclDataType_t)
  *			ncclRedOp_t op (enum ncclRedOp_t)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *			const void * acc (const void *)
  *	)
  */
@@ -1819,7 +1821,7 @@ typedef struct {
 	ncclDataType_t datatype;
 	ncclRedOp_t op;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	void * acc;
 	ncclResult_t retval;
 } args_ncclAllReduceWithBias_t;
@@ -1832,7 +1834,7 @@ typedef struct {
 	args->datatype = (ncclDataType_t) datatype; \
 	args->op = (ncclRedOp_t) op; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 	args->acc = (void *) acc; \
 };
 
@@ -1854,7 +1856,7 @@ typedef struct {
  *			ncclRedOp_t op (enum ncclRedOp_t)
  *			int root (int)
  *			ncclComm_t comm (struct ncclComm *)
- *			int stream (int)
+ *			void * stream (void *)
  *	)
  */
 typedef struct {
@@ -1865,7 +1867,7 @@ typedef struct {
 	ncclRedOp_t op;
 	int root;
 	ncclComm_t comm;
-	int stream;
+	void * stream;
 	ncclResult_t retval;
 } args_ncclReduce_t;
 
@@ -1878,7 +1880,7 @@ typedef struct {
 	args->op = (ncclRedOp_t) op; \
 	args->root = (int) root; \
 	args->comm = (ncclComm_t) comm; \
-	args->stream = (int) stream; \
+	args->stream = (void *) stream; \
 };
 
 /**

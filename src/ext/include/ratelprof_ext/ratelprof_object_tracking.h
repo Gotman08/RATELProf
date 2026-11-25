@@ -4,6 +4,7 @@
 #include <ratelprof.h>
 
 #include "domains/memory_op_helper.h"
+#include "ratelprof_ext/ratelprof_gpu_handles.h"
 
 typedef struct {
     hsa_agent_t agent;

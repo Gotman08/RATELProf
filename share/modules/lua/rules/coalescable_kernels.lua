@@ -33,7 +33,7 @@ return function (report)
 
     report.COL_IDX = { rank = 0, start = 3, dur = 4 }
 
-    report.HEADER = { "GPU ID", "Queue ID", "Seq. Length", "Seq. Start (" .. timeunit .. ")", "Seq. Dur (" .. timeunit .. ")", "Seq. Gap Dur (" .. timeunit .. ")", "Seq. Speed Up", "Kernel Name" }
+    report.HEADER = { "GPU ID", ratelprof.consts.GPU_QUEUE_LABEL .. " ID", "Seq. Length", "Seq. Start (" .. timeunit .. ")", "Seq. Dur (" .. timeunit .. ")", "Seq. Gap Dur (" .. timeunit .. ")", "Seq. Speed Up", "Kernel Name" }
 
     report.LOOP_IN = { ratelprof.consts.DOMAIN_KERNEL_ID }
 

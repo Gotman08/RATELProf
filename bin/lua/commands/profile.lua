@@ -46,7 +46,10 @@ local function handle_profile_option(options)
 
     
 
+    local enabled_vars = {}
     local function enable_domain(var)
+        if enabled_vars[var] then return end
+        enabled_vars[var] = true
         env.set_env(var, "1")
     end
 
@@ -67,6 +70,8 @@ local function handle_profile_option(options)
             Message:warn("Trace '"..trace_name.."' is not supported. Skipping it.")
         end
     end
+
+    env.set_nvidia_env_var(enabled_vars)
 
     local plugin_path = ratelprof.get_opt_val(options, "plugin")
     if plugin_path then

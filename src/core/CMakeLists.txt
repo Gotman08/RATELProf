@@ -2,6 +2,16 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 
 FILE(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
+IF(RATELPROF_GPU_VENDOR STREQUAL "NVIDIA")
+    # AMD runtimes are not interposed: HSA/HIP are replaced by the CUPTI domains,
+    # rocBLAS by the generated cuBLAS domain.
+    LIST(FILTER SOURCES EXCLUDE REGEX "/domains/(hip|hsa|rocblas)_profiled_functions\.c$")
+    LIST(APPEND SOURCES "${RATELPROF_NV_GEN_DIR}/cuda_api_tables.c")
+    IF(RATELPROF_HAVE_CUBLAS)
+        LIST(APPEND SOURCES "${RATELPROF_NV_GEN_DIR}/cublas_profiled_functions.c")
+    ENDIF()
+ENDIF()
+
 ADD_LIBRARY(${CORE_PROJECT_NAME}-lib-dyn    SHARED ${SOURCES})
 ADD_LIBRARY(${CORE_PROJECT_NAME}-lib-static STATIC ${SOURCES})
 

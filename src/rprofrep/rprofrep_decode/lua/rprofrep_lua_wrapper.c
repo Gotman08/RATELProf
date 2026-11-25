@@ -102,7 +102,11 @@ static int l_event_gpu_channel(lua_State *L) {
         channel = -(channel + 2);  // Convert back to original sdma_id value
         lua_pushstring(L, "SDMA ID");
     } else {
+#ifdef RATELPROF_VENDOR_NVIDIA
+        lua_pushstring(L, "Stream ID");
+#else
         lua_pushstring(L, "Queue ID");
+#endif
     }
     lua_pushnumber(L, channel);
     return 2;

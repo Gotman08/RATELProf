@@ -115,6 +115,9 @@ ratelprof_status_t __ratelprof_fini_impl(void)
     ratelprof_status_t status = RATELPROF_STATUS_SUCCESS;
 
 	for (int i = 0; i < RATELPROF_NB_DOMAIN; i++) {
+        if (domains_data[i].nb_function == 0 || domains_data[i].api_table_addr == NULL) {
+            continue; // Domain without API table (empty or reported by a vendor callback API)
+        }
 		RATELPROF_TRY(
 			ratelprof_cleanup_api_table(domains_data[i].api_table_addr),
 			LOG(LOG_LEVEL_ERROR, "Cannot finalize API table for domain %d. %s (code %d)\n", i, get_error_string(status), status)

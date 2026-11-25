@@ -21,7 +21,9 @@ local default_rules     = collect_defaults(ratelprof.consts.ANALYZE_REPORTS)
 local default_breakdown = collect_defaults(ratelprof.consts.BREAKDOWN_REPORTS)
 
 consts_helper.profile = {
-    desc = "\n\tProfile an AMD GPU application and trace AMD Library functions",
+    desc = ratelprof.consts.IS_NVIDIA
+        and "\n\tProfile an NVIDIA GPU application (CUPTI) and trace CUDA, NVTX, cuBLAS, NCCL, MPI and OpenMP functions"
+        or  "\n\tProfile an AMD GPU application and trace AMD Library functions",
     args = {
         {
             name = "application",
@@ -73,12 +75,14 @@ consts_helper.profile = {
                 'cpu'     is equivalent to all other APIs.
                 'omp'     is equivalent to 'omp-routine,omp-region,omp-tgt-rtl'.
                 'all'     is equivalent to 'cpu,gpu'.
-                'runtime' is equivalent to 'kernel,memory,omp-routine,omp-region,hip,rocblas,rccl,mpi'
-                Default is 'kernel,memory,hip'.]], "'" .. table.concat(trace_list, "', '") .. "'"),
+                'runtime' is equivalent to 'kernel,memory,omp-routine,omp-region,%s'
+                Default is '%s'.]], "'" .. table.concat(trace_list, "', '") .. "'",
+                ratelprof.consts.IS_NVIDIA and "cuda,nvtx,cublas,nccl,mpi" or "hip,rocblas,rccl,mpi",
+                ratelprof.consts._DEFAULT_TRACE),
             sname           = "t",
             arg             = "<API>[,<API>]",
             arg_required    = true,
-            default         = "kernel,memory,hip"
+            default         = ratelprof.consts._DEFAULT_TRACE
         },
         ["lib-path"] = {
             desc            = string.format([[ 
@@ -462,7 +466,9 @@ consts_helper.inspect = {
             is_list = false
         }
     },
-    desc = "\n\tInspect an AMD GPU application and output data about kernels from the application.",
+    desc = ratelprof.consts.IS_NVIDIA
+        and "\n\tInspect an NVIDIA GPU application (fatbin / cubin / SASS) and output data about kernels from the application."
+        or  "\n\tInspect an AMD GPU application and output data about kernels from the application.",
     opt = {
         ['save-json'] = {
             desc            = [[ 
@@ -496,11 +502,28 @@ consts_helper.inspect = {
             arg_required    = false,
             default         = nil
         },
+        sass = {
+            desc            = [[
+                (NVIDIA) Disassemble the kernels (nvdisasm/cuobjdump) and add a SASS
+                analysis: instruction mix, spills, tensor cores, barriers...]],
+            sname           = nil,
+            arg             = nil,
+            arg_required    = false,
+            default         = nil
+        },
+        ["sass-dump"] = {
+            desc            = [[
+                (NVIDIA) Also write the SASS listing of every kernel in the output directory.]],
+            sname           = nil,
+            arg             = nil,
+            arg_required    = false,
+            default         = nil
+        },
         archs = {
             desc            = [[ 
                 Inspect binary from the selected archs.]],
             sname           = "a",
-            arg             = "<gfxXYZ,[gfxXYZ,...]>",
+            arg             = ratelprof.consts.IS_NVIDIA and "<sm_XY,[sm_XY,...]>" or "<gfxXYZ,[gfxXYZ,...]>",
             arg_required    = true,
             default         = nil
         },

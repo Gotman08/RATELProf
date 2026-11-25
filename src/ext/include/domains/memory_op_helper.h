@@ -102,8 +102,31 @@ static inline void get_blit_fill_kernel_arg_data(ratelprof_memory_op_t op, uint8
     }
 }
 
+#ifdef RATELPROF_VENDOR_NVIDIA
+/* NVIDIA backend: memory operations reported by CUPTI. The numeric values are
+ * shared with the AMD ones so that is_blit_copy_kernel()/is_blit_set_kernel()
+ * keep their meaning (copy / fill) in the decoder. */
+#define RATELPROF_MEMORY_OP_CUDA_MEMSET      RATELPROF_MEMORY_OP_BLIT_SET
+#define RATELPROF_MEMORY_OP_CUDA_MEMCPY      RATELPROF_MEMORY_OP_BLIT_COPY
+#define RATELPROF_MEMORY_OP_CUDA_MEMCPY_P2P  RATELPROF_MEMORY_OP_BLIT_COPY_ALIGNED
+#endif
+
 static inline const char* get_blit_name_by_op(ratelprof_memory_op_t id) 
 {
+#ifdef RATELPROF_VENDOR_NVIDIA
+    static const char* nvidia_memory_op_id_to_str[RATELPROF_MEMORY_NB_OP] = {
+        [RATELPROF_MEMORY_OP_UNKNOWN]           = "Unknown",
+        [RATELPROF_MEMORY_OP_CUDA_MEMSET]       = "CUDA memset",
+        [RATELPROF_MEMORY_OP_BLIT_SET_2D]       = "CUDA memset",
+        [RATELPROF_MEMORY_OP_CUDA_MEMCPY]       = "CUDA memcpy",
+        [RATELPROF_MEMORY_OP_CUDA_MEMCPY_P2P]   = "CUDA memcpy (peer-to-peer)",
+        [RATELPROF_MEMORY_OP_BLIT_COPY_RECT]    = "CUDA memcpy",
+        [RATELPROF_MEMORY_OP_BLIT_COPY_ALIGNED_RECT] = "CUDA memcpy",
+        [RATELPROF_MEMORY_OP_SDMA_COPY]         = "CUDA memcpy",
+    };
+    if ((unsigned)id >= RATELPROF_MEMORY_NB_OP) return "Unknown";
+    return nvidia_memory_op_id_to_str[id];
+#endif
     static const char* ratelprof_memory_op_id_to_str[RATELPROF_MEMORY_NB_OP] = {
         [RATELPROF_MEMORY_OP_BLIT_SET] = "__amd_rocclr_fillBufferAligned",
         [RATELPROF_MEMORY_OP_BLIT_SET_2D] = "__amd_rocclr_fillBufferAligned2D",

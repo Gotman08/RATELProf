@@ -135,6 +135,32 @@ ratelprof_status_t get_correlation_id(uint64_t *corr_id, bool* has_children)
     return status;
 }
 
+// Allocate a unique ID without pushing it on the thread stack.
+// Used for events produced asynchronously (e.g. GPU activities collected from
+// vendor activity buffers) that are not nested in the calling thread.
+uint64_t ratelprof_new_id(void)
+{
+    return atomic_fetch_add_explicit(&global_id_counter, 1, memory_order_relaxed) & RATELPROF_ID_MASK;
+}
+
+// Flag the event currently on top of the thread stack as having children.
+// Used when the children are produced asynchronously (GPU activities of an API
+// call) and therefore never call get_correlation_id() in this thread.
+ratelprof_status_t ratelprof_mark_current_has_children(void)
+{
+    ratelprof_status_t status = RATELPROF_STATUS_SUCCESS;
+    ratelprof_stack_t* s;
+    uint64_t* top;
+
+    RATELPROF_TRY(
+        get_thread_stack(&s),
+        LOG(LOG_LEVEL_FATAL, "Failed to get thread specific ID stack. %s (code %d)\n", get_error_string(status), status)
+    );
+    RATELPROF_TRY(ratelprof_stack_peek(s, &top));
+    if ((*top & RATELPROF_ID_MASK) != 0) *top |= RATELPROF_CHILD_BIT;
+    return status;
+}
+
 // Initialize the thread-local storage for the stack
 ratelprof_status_t init_id_system(void)
 {

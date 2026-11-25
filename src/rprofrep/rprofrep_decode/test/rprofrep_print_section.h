@@ -314,10 +314,8 @@ static inline rprofrep_status_t rprofrep_print_events_section(rprofrep_decode_co
     print_table_header("Domain", "PID/GPU", "TID/QID/SDMA", "Name", "ID", "CID", "Start", "Dur");
     print_table_separator();
 
-    requested_domains[RATELPROF_DOMAIN_HIP] = true;
-    requested_domains[RATELPROF_DOMAIN_KERNEL] = true;
-    requested_domains[RATELPROF_DOMAIN_MEMORY] = true;
-    requested_domains[RATELPROF_DOMAIN_HSA] = false;
+    /* Default: all domains (as documented by the usage message). */
+    for (int d = 0; d < RATELPROF_NB_DOMAIN_EXT; d++) requested_domains[d] = true;
 
     RPROFREP_CHECK_CALL(rprofrep_for_each_gpu(ctx, __iterate_over_events, requested_domains));
     RPROFREP_CHECK_CALL(rprofrep_for_each_pid(ctx, __iterate_over_events, requested_domains));

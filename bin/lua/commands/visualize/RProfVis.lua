@@ -267,7 +267,7 @@ function RProfVis:generate()
             process_info.unit_label = "GPU"
             process_info.unit_value = gpu_id
             rprofrep:for_each_sdma(function (sdma)
-                process_info.subunit_label = "SDMA"
+                process_info.subunit_label = ratelprof.consts.GPU_COPY_ENGINE_LABEL
                 process_info.subunit_value = sdma
                 rprofrep:for_each_domain(function (domain, domain_name, _)
                     process_info.domain_name = domain_name
@@ -275,7 +275,7 @@ function RProfVis:generate()
                 end)
             end)
             rprofrep:for_each_queue(function (queue)
-                process_info.subunit_label = "Queue"
+                process_info.subunit_label = ratelprof.consts.GPU_QUEUE_LABEL
                 process_info.subunit_value = queue
                 rprofrep:for_each_domain(function (domain, domain_name, _)
                     process_info.domain_name = domain_name

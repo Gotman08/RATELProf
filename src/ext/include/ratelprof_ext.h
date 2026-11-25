@@ -1,6 +1,10 @@
 #ifndef RATELPROF_EXT_H
 #define RATELPROF_EXT_H
 
+#ifdef RATELPROF_VENDOR_NVIDIA
+#include "ratelprof_ext_nvidia.h"
+#else /* AMD backend */
+
 #include <stdint.h>
 #include <ratelprof.h>
 
@@ -143,4 +147,5 @@ const char* get_kernel_name(uint64_t kernel_object);
 char* get_copy_name(uint32_t src_type, uint32_t dst_type);
 ratelprof_status_t ratelprof_enable_node_id_tracking();
 
+#endif /* RATELPROF_VENDOR_NVIDIA */
 #endif // RATELPROF_EXT_H

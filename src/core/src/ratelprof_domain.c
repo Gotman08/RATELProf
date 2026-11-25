@@ -6,6 +6,29 @@
 #include "ratelprof_domain.h"
 #include "ratelprof.h"
 
+#ifdef RATELPROF_VENDOR_NVIDIA
+ratelprof_api_table_t omp_tgt_rtl_api_table; 
+ratelprof_api_table_t omp_routine_api_table; 
+ratelprof_api_table_t rccl_api_table; 
+ratelprof_api_table_t mpi_api_table; 
+#ifdef RATELPROF_HAVE_CUBLAS
+ratelprof_api_table_t cublas_api_table; 
+#endif
+
+ratelprof_domain_class_t domains_data[RATELPROF_NB_DOMAIN] = {
+    [RATELPROF_DOMAIN_CUDA_DRV] = DEFINE_CUPTI_DOMAIN(CUDA_DRV, cuda_drv),
+    [RATELPROF_DOMAIN_OMP_TGT_RTL] = DEFINE_DOMAIN(OMP_TGT_RTL, omp_tgt_rtl),
+#ifdef RATELPROF_HAVE_CUBLAS
+    [RATELPROF_DOMAIN_CUBLAS] = DEFINE_DOMAIN(CUBLAS, cublas),
+#else
+    [RATELPROF_DOMAIN_CUBLAS] = EMPTY_DOMAIN,
+#endif
+    [RATELPROF_DOMAIN_OMP_ROUTINE] = DEFINE_DOMAIN(OMP_ROUTINE, omp_routine),
+    [RATELPROF_DOMAIN_CUDA_RT] = DEFINE_CUPTI_DOMAIN(CUDA_RT, cuda_rt),
+    [RATELPROF_DOMAIN_NCCL] = DEFINE_DOMAIN_AS(NCCL, RCCL, rccl),
+    [RATELPROF_DOMAIN_MPI] = DEFINE_DOMAIN(MPI, mpi),
+};
+#else
 ratelprof_api_table_t hsa_api_table; 
 ratelprof_api_table_t omp_tgt_rtl_api_table; 
 ratelprof_api_table_t rocblas_api_table; 
@@ -23,3 +46,4 @@ ratelprof_domain_class_t domains_data[RATELPROF_NB_DOMAIN] = {
     [RATELPROF_DOMAIN_RCCL] = DEFINE_DOMAIN(RCCL, rccl),
     [RATELPROF_DOMAIN_MPI] = DEFINE_DOMAIN(MPI, mpi),
 };
+#endif

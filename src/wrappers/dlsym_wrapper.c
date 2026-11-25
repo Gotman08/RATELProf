@@ -16,8 +16,14 @@ typedef void* (*__dlsym_t)(void *handle, const char *symbol);
 
 void* dlsym(void *handle, const char *symbol) {
   static __dlsym_t dlsym_fn = NULL;
-  if (dlsym_fn == NULL)
-    dlsym_fn = (__dlsym_t)dlvsym(RTLD_NEXT, "dlsym", "GLIBC_2.2.5");
+  if (dlsym_fn == NULL) {
+    /* The base symbol version of dlsym depends on the architecture
+     * (x86_64: GLIBC_2.2.5, aarch64: GLIBC_2.17, ppc64le: GLIBC_2.17) and glibc >= 2.34
+     * also exports GLIBC_2.34. Try them in order. */
+    static const char* versions[] = { "GLIBC_2.34", "GLIBC_2.17", "GLIBC_2.2.5", "GLIBC_2.0", NULL };
+    for (int i = 0; versions[i] && dlsym_fn == NULL; i++)
+      dlsym_fn = (__dlsym_t)dlvsym(RTLD_NEXT, "dlsym", versions[i]);
+  }
 
   if (handle != NULL && handle != RTLD_NEXT) {
     if (handle == omp_tgt_rtl_api_table.handler && omp_tgt_rtl_api_table.is_populate) {

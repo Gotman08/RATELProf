@@ -24,7 +24,7 @@ local analyzed_data = {
                                                                                            "but hide memory operation latency can improve GPU utilization. "..
                                                                                            "(This score doesn't take in consideration async copies hidden by CPU computation.)"},
     {type = "sep", subrow = 4,          label = "Potential Speedup"},
-    {key = "speedup_async_copy",        label = "Perfect HIP Async Copy", desc = "Speed up if all copies were 100% asynchronous"},
+    {key = "speedup_async_copy",        label = "Perfect " .. ratelprof.consts.GPU_RUNTIME_LABEL .. " Async Copy", desc = "Speed up if all copies were 100% asynchronous"},
     {key = "speedup_hidden_copy",       label = "Perfect Hidden Copy",    desc = "Speed up if all copies were hidden by kernels"},
     {key = "speedup_copy_coalescing",   label = "Copy Coalescing",        desc = "Speed up if all coalescable copies were coalesced"},
     {key = "speedup_kernel_coalescing", label = "Kernel Coalescing",      desc = "Speed up if all coalescable kernels were coalesced"}
@@ -92,8 +92,8 @@ function global.get_global_data(rprofrep, summarize_opt)
         end
     end
 
-    local async_speedup                 = get_attr("hip_memcpy_async",       "speedup_factor", 1)
-    local sync_speedup                  = get_attr("hip_memcpy_sync",        "speedup_factor", 1)
+    local async_speedup                 = get_attr(ratelprof.consts.RULE_MEMCPY_ASYNC, "speedup_factor", 1)
+    local sync_speedup                  = get_attr(ratelprof.consts.RULE_MEMCPY_SYNC,  "speedup_factor", 1)
     local bytes_transferred             = get_attr("gpu_mem_size_sum",       "total_bytes")
     local concurrency_score             = get_attr("concurrency",            "score")
     local hidden_score                  = get_attr("hidden_transfers",       "score")

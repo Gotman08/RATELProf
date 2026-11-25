@@ -46,7 +46,8 @@ consts.ANALYZE_REPORTS = {
     desc   = "This rule detects multiple small, back-to-back memory transfers that may be combined into a single, larger transfers.\n" ..
              "Frequent small transfers can cause excessive overhead and underutilization of GPU resources.\n" ..
              "Combining them may reduce latency and improve overall throughput.\n" ..
-             "Note : These transfers are detected by SDMA engine and not by Stream ID. Some of the given advices might not be correct.",
+             (consts.IS_NVIDIA and "Note : These transfers are grouped by CUDA stream." or
+             "Note : These transfers are detected by SDMA engine and not by Stream ID. Some of the given advices might not be correct."),
     opt    = {
       th_dur   = { default = 1e6, desc = "\tMaximum duration (in ns) a transfers must have to be analyzed for coalescable optimization." },
       th_gap   = { default = 1e6, desc = "\tMaximum gaps duration (in ns) between two transfers." },
@@ -89,17 +90,19 @@ consts.ANALYZE_REPORTS = {
     }
   },
 
-  hip_memcpy_async = {
+  [consts.RULE_MEMCPY_ASYNC] = {
     desc   = "This rule identifies asynchronous memory transfers that end up becoming synchronous if the memory is pageable or if the transfers is too short.",
+    impl   = "hip_memcpy_async",
     opt    = {
       timeunit = opt_timeunit,
       sizeunit = opt_sizeunit
     }
   },
 
-  hip_memcpy_sync = {
+  [consts.RULE_MEMCPY_SYNC] = {
     desc   = "This rule identifies memory transfers that are synchronous and block the host during GPU memory transfers.\n"..
-             "It includes all hipMemcpy*() API functions.",
+             "It includes all " .. consts.GPU_RUNTIME_LABEL:lower() .. "Memcpy*() API functions.",
+    impl   = "hip_memcpy_sync",
     opt    = {
       timeunit = opt_timeunit,
       sizeunit = opt_sizeunit
@@ -108,7 +111,7 @@ consts.ANALYZE_REPORTS = {
 }
 
 for name, data in pairs(consts.ANALYZE_REPORTS) do
-  data.path = consts._MODULES_DIR .. "lua/rules/" ..  name .. ".lua"
+  data.path = consts._MODULES_DIR .. "lua/rules/" ..  (data.impl or name) .. ".lua"
   data.default = true
 end
 
@@ -148,6 +151,19 @@ for name, data in pairs(consts.STATS_REPORTS) do
   data.default = data.mode == "Aggregated-Mode" and true or false
 end
 
+local API_REPORT_DEFINITION_NVIDIA = {
+    {key = "omp_region",      domain_id = consts.DOMAIN_OMPT_ID,        default = true },
+    {key = "omp_target",      domain_id = consts.DOMAIN_OMP_TGT_RTL_ID, default = false },
+    {key = "omp_routine",     domain_id = consts.DOMAIN_OMP_TGT_ID,     default = true },
+    {key = "cuda",            domain_id = consts.DOMAIN_HIP_ID,         default = true },
+    {key = "mpi",             domain_id = consts.DOMAIN_MPI_ID,         default = false },
+    {key = "cuda_driver",     domain_id = consts.DOMAIN_HSA_ID,         default = false },
+    {key = "cublas",          domain_id = consts.DOMAIN_ROCBLAS_ID,     default = false },
+    {key = "nccl",            domain_id = consts.DOMAIN_RCCL_ID,        default = false },
+    {key = "nvtx",            domain_id = consts.DOMAIN_ROCTX_ID,       default = false },
+    {key = "cupti_for_rprof", domain_id = consts.DOMAIN_PROFILING_ID,   default = false },
+}
+
 local API_REPORT_DEFINITION = {
     {key = "omp_region",    domain_id = consts.DOMAIN_OMPT_ID,        default = true },
     {key = "omp_target",    domain_id = consts.DOMAIN_OMP_TGT_RTL_ID, default = false },
@@ -162,6 +178,8 @@ local API_REPORT_DEFINITION = {
 }
 
 consts.DOMAIN_FOR_REPORT = {}
+
+if consts.IS_NVIDIA then API_REPORT_DEFINITION = API_REPORT_DEFINITION_NVIDIA end
 
 -- Populate API reports
 for _, r in ipairs(API_REPORT_DEFINITION) do

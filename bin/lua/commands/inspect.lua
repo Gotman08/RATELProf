@@ -29,7 +29,7 @@ local function iterate_linked_lib(binary_app, func)
 end
 
 
-function inspect.get_kernel_number(binary_app)
+function inspect.get_kernel_number(binary_app, quiet)
     local res = iterate_linked_lib(binary_app, function(bin)
         return liborkh.get_kernel_count(bin, { id_mode = 1 })
     end)
@@ -41,6 +41,7 @@ function inspect.get_kernel_number(binary_app)
     end
 
     if nb_kernels == 0 then
+        if quiet then return 0 end
         Message:error("No kernels found in binary or any linked libraries" )
         os.exit(1)
     end

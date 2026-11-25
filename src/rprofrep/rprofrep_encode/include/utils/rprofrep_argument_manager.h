@@ -14,13 +14,21 @@ typedef struct rprofrep_arg_writer_s {
 
 typedef struct rprofrep_argument_manager_s
 {
+#ifdef RATELPROF_VENDOR_NVIDIA
+    rprofrep_arg_writer_t __cuda_rt_api_arg_writer[CUDA_RT_API_ID_NB_FUNCTION];
+    rprofrep_arg_writer_t __cuda_drv_api_arg_writer[CUDA_DRV_API_ID_NB_FUNCTION];
+#ifdef RATELPROF_HAVE_CUBLAS
+    rprofrep_arg_writer_t __cublas_api_arg_writer[CUBLAS_API_ID_NB_FUNCTION];
+#endif
+#else
     rprofrep_arg_writer_t __hip_api_arg_writer[HIP_API_ID_NB_FUNCTION];
     rprofrep_arg_writer_t __hsa_api_arg_writer[HSA_API_ID_NB_FUNCTION];
+    rprofrep_arg_writer_t __rocblas_api_arg_writer[ROCBLAS_API_ID_NB_FUNCTION];
+#endif
     rprofrep_arg_writer_t __mpi_api_arg_writer[MPI_API_ID_NB_FUNCTION];
     rprofrep_arg_writer_t __omp_tgt_rtl_api_arg_writer[OMP_TGT_RTL_API_ID_NB_FUNCTION];
     rprofrep_arg_writer_t __omp_routine_api_arg_writer[OMP_ROUTINE_API_ID_NB_FUNCTION];
     rprofrep_arg_writer_t __ompt_api_arg_writer[OMPT_API_ID_NB_FUNCTION];
-    rprofrep_arg_writer_t __rocblas_api_arg_writer[ROCBLAS_API_ID_NB_FUNCTION];
     rprofrep_arg_writer_t __rccl_api_arg_writer[RCCL_API_ID_NB_FUNCTION];
 
     rprofrep_arg_writer_t* api_arg_writer[RATELPROF_NB_DOMAIN_EXT];

@@ -57,6 +57,34 @@ typedef size_t ratelprof_api_id_t;
  * This enum defines the different domains in the profiling system. Each domain 
  * represents a specific API or runtime environment that can be profiled.
  */
+#ifdef RATELPROF_VENDOR_NVIDIA
+/*
+ * NVIDIA backend.
+ * The numeric value of every domain is identical to the AMD backend so that the
+ * .rprof-rep report format, the decoder, the Lua post-processing and
+ * RATELProf-Visualize work unchanged with both vendors:
+ *   AMD HSA     <-> CUDA Driver API  (traced with the CUPTI callback API)
+ *   AMD rocBLAS <-> cuBLAS
+ *   AMD HIP     <-> CUDA Runtime API (traced with the CUPTI callback API)
+ *   AMD RCCL    <-> NCCL (same API)
+ */
+typedef enum ratelprof_domain_e{
+	RATELPROF_DOMAIN_CUDA_DRV    = 0, /**< Domain CUDA Driver API (CUPTI). */
+	RATELPROF_DOMAIN_OMP_TGT_RTL = 1, /**< Domain omp_tgt_rtl. */
+	RATELPROF_DOMAIN_CUBLAS      = 2, /**< Domain cuBLAS. */
+	RATELPROF_DOMAIN_OMP_ROUTINE = 3, /**< Domain omp_routine. */
+	RATELPROF_DOMAIN_CUDA_RT     = 4, /**< Domain CUDA Runtime API (CUPTI). */
+	RATELPROF_DOMAIN_NCCL        = 5, /**< Domain NCCL. */
+	RATELPROF_DOMAIN_MPI         = 6, /**< Domain mpi. */
+    RATELPROF_NB_DOMAIN /**< Total number of domains (used for bounds checking). */
+} ratelprof_domain_t;
+
+/* Source compatibility aliases for the vendor-neutral parts of RATELProf. */
+#define RATELPROF_DOMAIN_HSA     RATELPROF_DOMAIN_CUDA_DRV
+#define RATELPROF_DOMAIN_ROCBLAS RATELPROF_DOMAIN_CUBLAS
+#define RATELPROF_DOMAIN_HIP     RATELPROF_DOMAIN_CUDA_RT
+#define RATELPROF_DOMAIN_RCCL    RATELPROF_DOMAIN_NCCL
+#else
 typedef enum ratelprof_domain_e{
 	RATELPROF_DOMAIN_HSA, /**< Domain hsa. */
 	RATELPROF_DOMAIN_OMP_TGT_RTL, /**< Domain omp_tgt_rtl. */
@@ -67,6 +95,7 @@ typedef enum ratelprof_domain_e{
 	RATELPROF_DOMAIN_MPI, /**< Domain mpi. */
     RATELPROF_NB_DOMAIN /**< Total number of domains (used for bounds checking). */
 } ratelprof_domain_t;
+#endif
 
 
 /**

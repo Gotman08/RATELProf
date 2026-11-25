@@ -1,0 +1,9 @@
+-- vendor.lua : generated at configure time from bin/lua/vendor.lua.in
+-- GPU vendor backend RATELProf has been built for (AMD or NVIDIA).
+return {
+    VENDOR          = "@RATELPROF_GPU_VENDOR@",
+    -- NVIDIA backend only
+    CUDA_ROOT       = "@RATELPROF_CUDA_ROOT@",
+    CUPTI_LIBRARY   = "@RATELPROF_CUPTI_LIBRARY@",
+    CUPTI_API_VERSION = "@RATELPROF_CUPTI_API_VERSION@",
+}

@@ -5,7 +5,20 @@ local function is_synchronized(gpu_event, cpu_event)
     return gpu_event:start() > cpu_event:start() and  gpu_event:stop() < cpu_event:stop()
 end
 
-local DEFAULT_ADVICE_MSG = [[
+local IS_NVIDIA = ratelprof.consts.IS_NVIDIA
+
+local DEFAULT_ADVICE_MSG = IS_NVIDIA and [[
+The following memory transfers are synchronized with their corresponding CUDA asynchronous memory copy trace.
+It appears that the transferred memory is either using PAGEABLE memory or is not large enough to be processed asynchronously.
+(%d of them use PAGEABLE host memory according to CUPTI.)
+
+This correspond to %.2f%% of your cudaMemcpy*Async operations.
+
+Suggestion: If applicable, use PINNED memory instead by using cudaMallocHost/cudaHostAlloc (or cudaHostRegister)
+to allocate your host side memory.
+
+Your application might speed up by x%.3f.
+]] or [[
 The following memory transfers are synchronized with their corresponding HIP asynchronous memory copy trace.
 It appears that the transferred memory is either using PAGEABLE memory or is not large enough to be processed asynchronously.
 
@@ -15,6 +28,18 @@ Suggestion: If applicable, use PINNED memory instead by using hipHostMalloc to a
 
 Your application might speed up by x%.3f.
 ]]
+
+-- CUPTI memory kinds (CUpti_ActivityMemoryKind)
+local CUPTI_MEMORY_KIND_PAGEABLE = 1
+
+local ASYNC_PATTERNS = IS_NVIDIA and { "^cudaMemcpy[%w_]*Async", "^cuMemcpy[%w_]*Async" } or { "^hipMemcpy[%w_]*Async$" }
+
+local function is_async_api(name)
+    for _, pattern in ipairs(ASYNC_PATTERNS) do
+        if name:match(pattern) then return true end
+    end
+    return false
+end
 
 local DEFAULT_NO_ADVICE_MSG = [[
 There were no problems detected related to asynchronous memcpy operations.
@@ -40,6 +65,7 @@ return function (report)
         self.grouped_copies_by_loc = GroupByLocation.new(rprofrep)
         self.nb_copy  = 0
         self.nb_sync_copy = 0
+        self.nb_pageable = 0
     end
 
     report.FOR_EACH = function (self, event, rprofrep)
@@ -47,8 +73,14 @@ return function (report)
         if cpu_event then
             local api_name = cpu_event:name()
             self.nb_copy = self.nb_copy + 1
-            if api_name:match("^hipMemcpy[%w_]*Async$") and is_synchronized(event, cpu_event) then
+            if is_async_api(api_name) and is_synchronized(event, cpu_event) then
                 self.nb_sync_copy = self.nb_sync_copy + 1
+                if IS_NVIDIA then
+                    local args = event:args()
+                    if args.src_kind == CUPTI_MEMORY_KIND_PAGEABLE or args.dst_kind == CUPTI_MEMORY_KIND_PAGEABLE then
+                        self.nb_pageable = self.nb_pageable + 1
+                    end
+                end
 
                 self.grouped_copies_by_loc:add(cpu_event, event:name(), {
                     total_size    = event:args().size,
@@ -91,7 +123,11 @@ return function (report)
         if #data == 0 then
             self.MESSAGE = DEFAULT_NO_ADVICE_MSG
         else
-            self.MESSAGE = string.format(DEFAULT_ADVICE_MSG, self.copy_pct, self.speedup_factor)
+            if IS_NVIDIA then
+                self.MESSAGE = string.format(DEFAULT_ADVICE_MSG, self.nb_pageable, self.copy_pct, self.speedup_factor)
+            else
+                self.MESSAGE = string.format(DEFAULT_ADVICE_MSG, self.copy_pct, self.speedup_factor)
+            end
         end
     end
 end

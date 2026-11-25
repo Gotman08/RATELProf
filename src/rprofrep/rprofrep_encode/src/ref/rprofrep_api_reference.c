@@ -13,23 +13,35 @@ rprofrep_status_t rprofrep_init_api_data_section(rprofrep_api_data_ref_t* data, 
     RPROFREP_CHECK_ALLOC(data);
     data->ref_counter = 0;
 
+    for (size_t i = 0; i < RATELPROF_NB_DOMAIN_EXT; i++) data->api_data_existed_ref_id[i] = NULL;
+#ifdef RATELPROF_VENDOR_NVIDIA
+    data->api_data_existed_ref_id[RATELPROF_DOMAIN_CUDA_RT]     = data->__cuda_rt_api_existed_ref_id;
+    data->api_data_existed_ref_id[RATELPROF_DOMAIN_CUDA_DRV]    = data->__cuda_drv_api_existed_ref_id;
+    memset(data->__cuda_rt_api_existed_ref_id,     0xFF, sizeof(data->__cuda_rt_api_existed_ref_id));
+    memset(data->__cuda_drv_api_existed_ref_id,    0xFF, sizeof(data->__cuda_drv_api_existed_ref_id));
+#ifdef RATELPROF_HAVE_CUBLAS
+    data->api_data_existed_ref_id[RATELPROF_DOMAIN_CUBLAS]      = data->__cublas_api_existed_ref_id;
+    memset(data->__cublas_api_existed_ref_id,      0xFF, sizeof(data->__cublas_api_existed_ref_id));
+#endif
+#else
     data->api_data_existed_ref_id[RATELPROF_DOMAIN_HIP]         = data->__hip_api_existed_ref_id;
     data->api_data_existed_ref_id[RATELPROF_DOMAIN_HSA]         = data->__hsa_api_existed_ref_id;
+    data->api_data_existed_ref_id[RATELPROF_DOMAIN_ROCBLAS]     = data->__rocblas_api_existed_ref_id;
+    memset(data->__hip_api_existed_ref_id,         0xFF, sizeof(data->__hip_api_existed_ref_id));
+    memset(data->__hsa_api_existed_ref_id,         0xFF, sizeof(data->__hsa_api_existed_ref_id));
+    memset(data->__rocblas_api_existed_ref_id,     0xFF, sizeof(data->__rocblas_api_existed_ref_id));
+#endif
     data->api_data_existed_ref_id[RATELPROF_DOMAIN_MPI]         = data->__mpi_api_existed_ref_id;
     data->api_data_existed_ref_id[RATELPROF_DOMAIN_OMP_TGT_RTL] = data->__omp_tgt_rtl_api_existed_ref_id;
     data->api_data_existed_ref_id[RATELPROF_DOMAIN_OMP_ROUTINE] = data->__omp_routine_api_existed_ref_id;
     data->api_data_existed_ref_id[RATELPROF_DOMAIN_RCCL]        = data->__rccl_api_existed_ref_id;
-    data->api_data_existed_ref_id[RATELPROF_DOMAIN_ROCBLAS]     = data->__rocblas_api_existed_ref_id;
     data->api_data_existed_ref_id[RATELPROF_DOMAIN_OMP_REGION]  = data->__ompt_api_existed_ref_id;
 
-    memset(data->__hip_api_existed_ref_id,         0xFF, sizeof(data->__hip_api_existed_ref_id));
-    memset(data->__hsa_api_existed_ref_id,         0xFF, sizeof(data->__hsa_api_existed_ref_id));
     memset(data->__mpi_api_existed_ref_id,         0xFF, sizeof(data->__mpi_api_existed_ref_id));
     memset(data->__omp_tgt_rtl_api_existed_ref_id, 0xFF, sizeof(data->__omp_tgt_rtl_api_existed_ref_id));
     memset(data->__omp_routine_api_existed_ref_id, 0xFF, sizeof(data->__omp_routine_api_existed_ref_id));
     memset(data->__ompt_api_existed_ref_id,        0xFF, sizeof(data->__ompt_api_existed_ref_id));
     memset(data->__rccl_api_existed_ref_id,        0xFF, sizeof(data->__rccl_api_existed_ref_id));
-    memset(data->__rocblas_api_existed_ref_id,     0xFF, sizeof(data->__rocblas_api_existed_ref_id));
 
     msgpack_init(&data->buffer, 0xFFFF, MSGPACK_OVERFLOW_WRITE_TO_FILE, filename);
 

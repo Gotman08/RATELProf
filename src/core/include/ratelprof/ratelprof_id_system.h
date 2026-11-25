@@ -223,4 +223,14 @@ ratelprof_status_t init_id_system(void);
  */
 void cleanup_id_system();
 
+/**
+ * @brief Allocate a unique event ID without pushing it on the thread ID stack.
+ */
+uint64_t ratelprof_new_id(void);
+
+/**
+ * @brief Mark the event on top of the current thread ID stack as having children.
+ */
+ratelprof_status_t ratelprof_mark_current_has_children(void);
+
 #endif // RATELPROF_ID_SYSTEM_H

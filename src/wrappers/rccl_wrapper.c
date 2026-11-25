@@ -5,7 +5,9 @@
 
 #include "ratelprof.h"
 
+#ifndef RATELPROF_VENDOR_NVIDIA
 #include "domains/minimal_abi/hip_minimal_abi.h"
+#endif
 #include "domains/minimal_abi/rccl_minimal_abi.h"
 
 
@@ -24,16 +26,16 @@ ncclResult_t ncclGetVersion(int * version) {
 ncclResult_t ncclCommFinalize(ncclComm_t comm) {
 	return CALL(ncclCommFinalize, comm, __builtin_return_address(0));
 };
-ncclResult_t ncclBcast(void * buff, size_t count, ncclDataType_t datatype, int root, ncclComm_t comm, int stream) {
+ncclResult_t ncclBcast(void * buff, size_t count, ncclDataType_t datatype, int root, ncclComm_t comm, void * stream) {
 	return CALL(ncclBcast, buff, count, datatype, root, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclGroupStart() {
 	return CALL(ncclGroupStart, __builtin_return_address(0));
 };
-ncclResult_t ncclAllToAll(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclComm_t comm, int stream) {
+ncclResult_t ncclAllToAll(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclComm_t comm, void * stream) {
 	return CALL(ncclAllToAll, sendbuff, recvbuff, count, datatype, comm, stream, __builtin_return_address(0));
 };
-ncclResult_t ncclAllGather(const void * sendbuff, void * recvbuff, size_t sendcount, ncclDataType_t datatype, ncclComm_t comm, int stream) {
+ncclResult_t ncclAllGather(const void * sendbuff, void * recvbuff, size_t sendcount, ncclDataType_t datatype, ncclComm_t comm, void * stream) {
 	return CALL(ncclAllGather, sendbuff, recvbuff, sendcount, datatype, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclGroupSimulateEnd(ncclSimInfo_t * simInfo) {
@@ -48,7 +50,7 @@ ncclResult_t ncclCommDeregister(const ncclComm_t comm, void * handle) {
 ncclResult_t mscclUnloadAlgo(mscclAlgoHandle_t mscclAlgoHandle) {
 	return CALL(mscclUnloadAlgo, mscclAlgoHandle, __builtin_return_address(0));
 };
-ncclResult_t ncclRecv(void * recvbuff, size_t count, ncclDataType_t datatype, int peer, ncclComm_t comm, int stream) {
+ncclResult_t ncclRecv(void * recvbuff, size_t count, ncclDataType_t datatype, int peer, ncclComm_t comm, void * stream) {
 	return CALL(ncclRecv, recvbuff, count, datatype, peer, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclGroupEnd() {
@@ -60,7 +62,7 @@ ncclResult_t ncclRedOpDestroy(ncclRedOp_t op, ncclComm_t comm) {
 ncclResult_t ncclCommCount(const ncclComm_t comm, int * count) {
 	return CALL(ncclCommCount, comm, count, __builtin_return_address(0));
 };
-ncclResult_t ncclScatter(const void * sendbuff, void * recvbuff, size_t recvcount, ncclDataType_t datatype, int root, ncclComm_t comm, int stream) {
+ncclResult_t ncclScatter(const void * sendbuff, void * recvbuff, size_t recvcount, ncclDataType_t datatype, int root, ncclComm_t comm, void * stream) {
 	return CALL(ncclScatter, sendbuff, recvbuff, recvcount, datatype, root, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclCommShrink(ncclComm_t comm, int * excludeRanksList, int excludeRanksCount, ncclComm_t * newcomm, ncclConfig_t * config, int shrinkFlags) {
@@ -87,7 +89,7 @@ ncclResult_t ncclCommCuDevice(const ncclComm_t comm, int * device) {
 ncclResult_t ncclCommSplit(ncclComm_t comm, int color, int key, ncclComm_t * newcomm, ncclConfig_t * config) {
 	return CALL(ncclCommSplit, comm, color, key, newcomm, config, __builtin_return_address(0));
 };
-ncclResult_t mscclRunAlgo(const void * sendBuff, const size_t sendCounts[], const size_t sDisPls[], void * recvBuff, const size_t recvCounts[], const size_t rDisPls[], size_t count, ncclDataType_t dataType, int root, int peer, ncclRedOp_t op, mscclAlgoHandle_t mscclAlgoHandle, ncclComm_t comm, int stream) {
+ncclResult_t mscclRunAlgo(const void * sendBuff, const size_t sendCounts[], const size_t sDisPls[], void * recvBuff, const size_t recvCounts[], const size_t rDisPls[], size_t count, ncclDataType_t dataType, int root, int peer, ncclRedOp_t op, mscclAlgoHandle_t mscclAlgoHandle, ncclComm_t comm, void * stream) {
 	return CALL(mscclRunAlgo, sendBuff, sendCounts, sDisPls, recvBuff, recvCounts, rDisPls, count, dataType, root, peer, op, mscclAlgoHandle, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclCommUserRank(const ncclComm_t comm, int * rank) {
@@ -96,16 +98,16 @@ ncclResult_t ncclCommUserRank(const ncclComm_t comm, int * rank) {
 ncclResult_t ncclRedOpCreatePreMulSum(ncclRedOp_t * op, void * scalar, ncclDataType_t datatype, ncclScalarResidence_t residence, ncclComm_t comm) {
 	return CALL(ncclRedOpCreatePreMulSum, op, scalar, datatype, residence, comm, __builtin_return_address(0));
 };
-ncclResult_t ncclAllReduce(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, int stream) {
+ncclResult_t ncclAllReduce(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, void * stream) {
 	return CALL(ncclAllReduce, sendbuff, recvbuff, count, datatype, op, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclCommInitRank(ncclComm_t * comm, int nranks, ncclUniqueId commId, int rank) {
 	return CALL(ncclCommInitRank, comm, nranks, commId, rank, __builtin_return_address(0));
 };
-ncclResult_t ncclBroadcast(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, int root, ncclComm_t comm, int stream) {
+ncclResult_t ncclBroadcast(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, int root, ncclComm_t comm, void * stream) {
 	return CALL(ncclBroadcast, sendbuff, recvbuff, count, datatype, root, comm, stream, __builtin_return_address(0));
 };
-ncclResult_t ncclAllToAllv(const void * sendbuff, const size_t sendcounts[], const size_t sdispls[], void * recvbuff, const size_t recvcounts[], const size_t rdispls[], ncclDataType_t datatype, ncclComm_t comm, int stream) {
+ncclResult_t ncclAllToAllv(const void * sendbuff, const size_t sendcounts[], const size_t sdispls[], void * recvbuff, const size_t recvcounts[], const size_t rdispls[], ncclDataType_t datatype, ncclComm_t comm, void * stream) {
 	return CALL(ncclAllToAllv, sendbuff, sendcounts, sdispls, recvbuff, recvcounts, rdispls, datatype, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t mscclLoadAlgo(const char * mscclAlgoFilePath, mscclAlgoHandle_t * mscclAlgoHandle, int rank) {
@@ -120,16 +122,16 @@ ncclResult_t ncclCommAbort(ncclComm_t comm) {
 ncclResult_t ncclGetUniqueId(ncclUniqueId * uniqueId) {
 	return CALL(ncclGetUniqueId, uniqueId, __builtin_return_address(0));
 };
-ncclResult_t ncclReduceScatter(const void * sendbuff, void * recvbuff, size_t recvcount, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, int stream) {
+ncclResult_t ncclReduceScatter(const void * sendbuff, void * recvbuff, size_t recvcount, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, void * stream) {
 	return CALL(ncclReduceScatter, sendbuff, recvbuff, recvcount, datatype, op, comm, stream, __builtin_return_address(0));
 };
-ncclResult_t ncclGather(const void * sendbuff, void * recvbuff, size_t sendcount, ncclDataType_t datatype, int root, ncclComm_t comm, int stream) {
+ncclResult_t ncclGather(const void * sendbuff, void * recvbuff, size_t sendcount, ncclDataType_t datatype, int root, ncclComm_t comm, void * stream) {
 	return CALL(ncclGather, sendbuff, recvbuff, sendcount, datatype, root, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclCommWindowDeregister(ncclComm_t comm, ncclWindow_t win) {
 	return CALL(ncclCommWindowDeregister, comm, win, __builtin_return_address(0));
 };
-ncclResult_t ncclSend(const void * sendbuff, size_t count, ncclDataType_t datatype, int peer, ncclComm_t comm, int stream) {
+ncclResult_t ncclSend(const void * sendbuff, size_t count, ncclDataType_t datatype, int peer, ncclComm_t comm, void * stream) {
 	return CALL(ncclSend, sendbuff, count, datatype, peer, comm, stream, __builtin_return_address(0));
 };
 ncclResult_t ncclCommInitRankConfig(ncclComm_t * comm, int nranks, ncclUniqueId commId, int rank, ncclConfig_t * config) {
@@ -138,10 +140,10 @@ ncclResult_t ncclCommInitRankConfig(ncclComm_t * comm, int nranks, ncclUniqueId 
 ncclResult_t ncclCommDestroy(ncclComm_t comm) {
 	return CALL(ncclCommDestroy, comm, __builtin_return_address(0));
 };
-ncclResult_t ncclAllReduceWithBias(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, int stream, const void * acc) {
+ncclResult_t ncclAllReduceWithBias(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, void * stream, const void * acc) {
 	return CALL(ncclAllReduceWithBias, sendbuff, recvbuff, count, datatype, op, comm, stream, acc, __builtin_return_address(0));
 };
-ncclResult_t ncclReduce(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclRedOp_t op, int root, ncclComm_t comm, int stream) {
+ncclResult_t ncclReduce(const void * sendbuff, void * recvbuff, size_t count, ncclDataType_t datatype, ncclRedOp_t op, int root, ncclComm_t comm, void * stream) {
 	return CALL(ncclReduce, sendbuff, recvbuff, count, datatype, op, root, comm, stream, __builtin_return_address(0));
 };
 void ncclResetDebugInit() {

@@ -51,8 +51,29 @@ function env.set_filter_env_var(filename, filter_type)
 end
 
 function env.set_number_of_kernel_env_var(application)
+    if ratelprof.consts.IS_NVIDIA then
+        -- Only used to size the kernel name table: never fatal on NVIDIA
+        -- (kernels may also be JIT compiled or loaded at run time).
+        local ok, n = pcall(inspect.get_kernel_number, application, true)
+        if not ok or not n or n <= 0 then n = 4096 end
+        env.set_env(ratelprof.consts._ENV.NB_KERNEL_AV, math.max(n, 1024))
+        return
+    end
     local n = inspect.get_kernel_number(application)
     env.set_env(ratelprof.consts._ENV.NB_KERNEL_AV, n)
+end
+
+-- NVIDIA: NVTX markers/ranges are collected through the CUPTI NVTX injection.
+function env.set_nvidia_env_var(enabled_vars)
+    if not ratelprof.consts.IS_NVIDIA then return end
+    if enabled_vars[ratelprof.consts._ENV.DOMAIN_ROCTX] then
+        local cupti = ratelprof.consts._CUPTI_LIBRARY
+        if cupti ~= "" and ratelprof.fs.exists(cupti) then
+            env.set_env("NVTX_INJECTION64_PATH", cupti)
+        else
+            Message:warn("CUPTI library not found ('" .. cupti .. "'): NVTX tracing disabled. Set RATELPROF_CUPTI_LIBRARY.")
+        end
+    end
 end
 
 

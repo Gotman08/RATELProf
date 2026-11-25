@@ -11,7 +11,7 @@
 #include "ratelprof/ratelprof_time.h"
 #include "utils/logger.h"
 
-#ifdef __i386
+#if defined(__i386)
 static inline uint64_t rdtsc(void)
 {
     uint64_t x;
@@ -25,8 +25,32 @@ static inline uint64_t rdtsc(void)
     __asm__ volatile ("rdtsc" : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
 }
+#elif defined(__aarch64__)
+/* ARMv8 generic timer (virtual counter). Used on NVIDIA Grace (GH200/GB200)
+ * and every other aarch64 host. The frequency is given by CNTFRQ_EL0. */
+#define RATELPROF_HAVE_COUNTER_FREQ 1
+static inline uint64_t rdtsc(void)
+{
+    uint64_t x;
+    __asm__ volatile ("isb; mrs %0, cntvct_el0" : "=r"(x) :: "memory");
+    return x;
+}
+static inline uint64_t counter_freq(void)
+{
+    uint64_t f;
+    __asm__ volatile ("mrs %0, cntfrq_el0" : "=r"(f));
+    return f;
+}
 #else
-#error "RDTSC is not supported on this architecture."
+/* Portable fallback: no cycle counter, use the raw monotonic clock in ns. */
+#define RATELPROF_HAVE_COUNTER_FREQ 1
+static inline uint64_t rdtsc(void)
+{
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &t);
+    return (uint64_t)t.tv_sec * 1000000000ULL + (uint64_t)t.tv_nsec;
+}
+static inline uint64_t counter_freq(void) { return 1000000000ULL; }
 #endif
 
 static double cycles_per_ns = 0.0;
@@ -37,6 +61,13 @@ static double cycles_per_ns = 0.0;
 
 static void calibrate_tsc(void)
 {
+#ifdef RATELPROF_HAVE_COUNTER_FREQ
+    uint64_t f = counter_freq();
+    if (f != 0) {
+        cycles_per_ns = (double)f / 1e9;
+        return;
+    }
+#endif
     struct timespec start, end;
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);

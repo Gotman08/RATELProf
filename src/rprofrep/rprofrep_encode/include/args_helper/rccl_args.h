@@ -15,6 +15,12 @@
 
 #include "msgpack.h"
 
+#ifdef RATELPROF_VENDOR_NVIDIA
+#define RATELPROF_GPU_STREAM_TYPE_NAME "cudaStream_t"
+#else
+#define RATELPROF_GPU_STREAM_TYPE_NAME "hipStream_t"
+#endif
+
 //	ncclComm_t comm (struct ncclComm *);
 //	const char * retval (const char *);
 
@@ -92,7 +98,7 @@ static void write_ncclCommFinalize_args_to_buffer(args_ncclCommFinalize_t* args,
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	int root (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclBcast_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -107,7 +113,7 @@ static void write_ncclBcast_params_to_buffer(rprofrep_encode_context_t* ctx, msg
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "root");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -119,7 +125,7 @@ static void write_ncclBcast_args_to_buffer(args_ncclBcast_t* args, rprofrep_enco
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->root);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -144,7 +150,7 @@ static void write_ncclGroupStart_args_to_buffer(args_ncclGroupStart_t* args, rpr
 //	size_t count (unsigned long);
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclAllToAll_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -159,7 +165,7 @@ static void write_ncclAllToAll_params_to_buffer(rprofrep_encode_context_t* ctx, 
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "datatype");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -171,7 +177,7 @@ static void write_ncclAllToAll_args_to_buffer(args_ncclAllToAll_t* args, rprofre
 	msgpack_encode_int(buf, args->count);
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -182,7 +188,7 @@ static void write_ncclAllToAll_args_to_buffer(args_ncclAllToAll_t* args, rprofre
 //	size_t sendcount (unsigned long);
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclAllGather_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -197,7 +203,7 @@ static void write_ncclAllGather_params_to_buffer(rprofrep_encode_context_t* ctx,
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "datatype");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -209,7 +215,7 @@ static void write_ncclAllGather_args_to_buffer(args_ncclAllGather_t* args, rprof
 	msgpack_encode_int(buf, args->sendcount);
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -312,7 +318,7 @@ static void write_mscclUnloadAlgo_args_to_buffer(args_mscclUnloadAlgo_t* args, r
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	int peer (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclRecv_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -327,7 +333,7 @@ static void write_ncclRecv_params_to_buffer(rprofrep_encode_context_t* ctx, msgp
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "peer");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -339,7 +345,7 @@ static void write_ncclRecv_args_to_buffer(args_ncclRecv_t* args, rprofrep_encode
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->peer);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -409,7 +415,7 @@ static void write_ncclCommCount_args_to_buffer(args_ncclCommCount_t* args, rprof
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	int root (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclScatter_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -426,7 +432,7 @@ static void write_ncclScatter_params_to_buffer(rprofrep_encode_context_t* ctx, m
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "root");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -439,7 +445,7 @@ static void write_ncclScatter_args_to_buffer(args_ncclScatter_t* args, rprofrep_
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->root);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -686,7 +692,7 @@ static void write_ncclCommSplit_args_to_buffer(args_ncclCommSplit_t* args, rprof
 //	ncclRedOp_t op (enum ncclRedOp_t);
 //	mscclAlgoHandle_t mscclAlgoHandle (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_mscclRunAlgo_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -717,7 +723,7 @@ static void write_mscclRunAlgo_params_to_buffer(rprofrep_encode_context_t* ctx, 
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "mscclAlgoHandle");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -737,7 +743,7 @@ static void write_mscclRunAlgo_args_to_buffer(args_mscclRunAlgo_t* args, rprofre
 	msgpack_encode_int(buf, args->op);
 	msgpack_encode_int(buf, args->mscclAlgoHandle);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -805,7 +811,7 @@ static void write_ncclRedOpCreatePreMulSum_args_to_buffer(args_ncclRedOpCreatePr
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	ncclRedOp_t op (enum ncclRedOp_t);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclAllReduce_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -822,7 +828,7 @@ static void write_ncclAllReduce_params_to_buffer(rprofrep_encode_context_t* ctx,
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "op");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -835,7 +841,7 @@ static void write_ncclAllReduce_args_to_buffer(args_ncclAllReduce_t* args, rprof
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->op);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -880,7 +886,7 @@ static void write_ncclCommInitRank_args_to_buffer(args_ncclCommInitRank_t* args,
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	int root (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclBroadcast_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -897,7 +903,7 @@ static void write_ncclBroadcast_params_to_buffer(rprofrep_encode_context_t* ctx,
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "root");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -910,7 +916,7 @@ static void write_ncclBroadcast_args_to_buffer(args_ncclBroadcast_t* args, rprof
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->root);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -924,7 +930,7 @@ static void write_ncclBroadcast_args_to_buffer(args_ncclBroadcast_t* args, rprof
 //	const size_t[] rdispls (const unsigned long[]);
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclAllToAllv_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -945,7 +951,7 @@ static void write_ncclAllToAllv_params_to_buffer(rprofrep_encode_context_t* ctx,
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "datatype");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -960,7 +966,7 @@ static void write_ncclAllToAllv_args_to_buffer(args_ncclAllToAllv_t* args, rprof
 	msgpack_encode_uint(buf, (uintptr_t)args->rdispls);
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -1056,7 +1062,7 @@ static void write_ncclGetUniqueId_args_to_buffer(args_ncclGetUniqueId_t* args, r
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	ncclRedOp_t op (enum ncclRedOp_t);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclReduceScatter_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -1073,7 +1079,7 @@ static void write_ncclReduceScatter_params_to_buffer(rprofrep_encode_context_t* 
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "op");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -1086,7 +1092,7 @@ static void write_ncclReduceScatter_args_to_buffer(args_ncclReduceScatter_t* arg
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->op);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -1098,7 +1104,7 @@ static void write_ncclReduceScatter_args_to_buffer(args_ncclReduceScatter_t* arg
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	int root (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclGather_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -1115,7 +1121,7 @@ static void write_ncclGather_params_to_buffer(rprofrep_encode_context_t* ctx, ms
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "root");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -1128,7 +1134,7 @@ static void write_ncclGather_args_to_buffer(args_ncclGather_t* args, rprofrep_en
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->root);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -1161,7 +1167,7 @@ static void write_ncclCommWindowDeregister_args_to_buffer(args_ncclCommWindowDer
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	int peer (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclSend_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -1176,7 +1182,7 @@ static void write_ncclSend_params_to_buffer(rprofrep_encode_context_t* ctx, msgp
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "peer");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -1188,7 +1194,7 @@ static void write_ncclSend_args_to_buffer(args_ncclSend_t* args, rprofrep_encode
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->peer);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 
@@ -1255,7 +1261,7 @@ static void write_ncclCommDestroy_args_to_buffer(args_ncclCommDestroy_t* args, r
 //	ncclDataType_t datatype (enum ncclDataType_t);
 //	ncclRedOp_t op (enum ncclRedOp_t);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	const void * acc (const void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
@@ -1273,7 +1279,7 @@ static void write_ncclAllReduceWithBias_params_to_buffer(rprofrep_encode_context
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "op");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "const void *");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "acc");
@@ -1288,7 +1294,7 @@ static void write_ncclAllReduceWithBias_args_to_buffer(args_ncclAllReduceWithBia
 	msgpack_encode_int(buf, args->datatype);
 	msgpack_encode_int(buf, args->op);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_uint(buf, (uintptr_t)args->acc);
 	msgpack_encode_int(buf, args->retval);
 }
@@ -1302,7 +1308,7 @@ static void write_ncclAllReduceWithBias_args_to_buffer(args_ncclAllReduceWithBia
 //	ncclRedOp_t op (enum ncclRedOp_t);
 //	int root (int);
 //	ncclComm_t comm (struct ncclComm *);
-//	int stream (int);
+//	void * stream (void *);
 //	ncclResult_t retval (enum ncclResult_t);
 
 static void write_ncclReduce_params_to_buffer(rprofrep_encode_context_t* ctx, msgpack_buffer_t* buf) {
@@ -1321,7 +1327,7 @@ static void write_ncclReduce_params_to_buffer(rprofrep_encode_context_t* ctx, ms
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "root");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclComm_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "comm");
-	rprofrep_msgpack_ext_encode_string(ctx, buf, "int");
+	rprofrep_msgpack_ext_encode_string(ctx, buf, RATELPROF_GPU_STREAM_TYPE_NAME);
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "stream");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "ncclResult_t");
 	rprofrep_msgpack_ext_encode_string(ctx, buf, "retval");
@@ -1335,7 +1341,7 @@ static void write_ncclReduce_args_to_buffer(args_ncclReduce_t* args, rprofrep_en
 	msgpack_encode_int(buf, args->op);
 	msgpack_encode_int(buf, args->root);
 	msgpack_encode_uint(buf, (uintptr_t)args->comm);
-	msgpack_encode_int(buf, args->stream);
+	msgpack_encode_uint(buf, (uintptr_t)args->stream);
 	msgpack_encode_int(buf, args->retval);
 }
 

@@ -1,15 +1,28 @@
 local report_helper = require ("utils.report_helper")
 local GroupByLocation = require("utils.GroupByLocation")
 
+local IS_NVIDIA = ratelprof.consts.IS_NVIDIA
+local RT = IS_NVIDIA and "cuda" or "hip"
+
 local DEFAULT_ADVICE_MSG = [[
 The following are synchronous memory transfers that block the host.
 
-This correspond to %.2f%% of your hipMemcpy* operations.
+This correspond to %.2f%% of your ]] .. RT .. [[Memcpy* operations.
 
-Suggestion: Use hipMemcpy*Async() APIs instead.
+Suggestion: Use ]] .. RT .. [[Memcpy*Async() APIs instead (with pinned host memory).
 
 Your application might speed up by x%.3f.
 ]]
+
+local COPY_PATTERNS = IS_NVIDIA and { "^cudaMemcpy", "^cuMemcpy" } or { "^hipMemcpy" }
+
+local function is_sync_copy_api(name)
+    if name:match("Async") then return false end
+    for _, pattern in ipairs(COPY_PATTERNS) do
+        if name:match(pattern) then return true end
+    end
+    return false
+end
 
 local DEFAULT_NO_ADVICE_MSG = [[
 There were no problems detected related to synchronous memcpy operations.
@@ -42,7 +55,7 @@ return function (report)
         if cpu_event then
             local api_name = cpu_event:name()
             self.nb_copy = self.nb_copy + 1
-            if api_name:match("^hipMemcpy") and not api_name:match("Async$") then
+            if is_sync_copy_api(api_name) then
                 self.nb_sync_copy = self.nb_sync_copy + 1
 
                 self.grouped_copies_by_loc:add(cpu_event, event:name(), {

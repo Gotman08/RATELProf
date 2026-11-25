@@ -8,6 +8,29 @@
 
 #include "ratelprof.h"
 
+#ifdef RATELPROF_VENDOR_NVIDIA
+/* NVIDIA backend: CUDA Runtime/Driver are traced with CUPTI (generated helpers),
+ * NCCL reuses the RCCL helpers (RCCL is API compatible with NCCL). */
+#include "domains/mpi_api_helper.h"
+extern ratelprof_api_table_t mpi_api_table;
+
+#include "cuda_drv_api_helper.h"
+#include "cuda_rt_api_helper.h"
+
+#include "domains/omp_tgt_rtl_api_helper.h"
+extern ratelprof_api_table_t omp_tgt_rtl_api_table;
+
+#ifdef RATELPROF_HAVE_CUBLAS
+#include "cublas_api_helper.h"
+extern ratelprof_api_table_t cublas_api_table;
+#endif
+
+#include "domains/omp_routine_api_helper.h"
+extern ratelprof_api_table_t omp_routine_api_table;
+
+#include "domains/rccl_api_helper.h"
+extern ratelprof_api_table_t rccl_api_table;
+#else
 #include "domains/hsa_api_helper.h"
 extern ratelprof_api_table_t hsa_api_table;
 
@@ -29,6 +52,8 @@ extern ratelprof_api_table_t rccl_api_table;
 #include "domains/mpi_api_helper.h"
 extern ratelprof_api_table_t mpi_api_table;
 
+
+#endif
 
 typedef struct {
     ratelprof_api_table_t* api_table_addr;
@@ -57,6 +82,13 @@ typedef struct {
 }
 
 #define EMPTY_DOMAIN {0}
+
+/* Domain whose functions are not interposed but reported through CUPTI callbacks:
+ * no API table, but names/ids are known (generated from the CUPTI headers). */
+#define DEFINE_CUPTI_DOMAIN(UNAME, LNAME) {                                     .api_table_addr             = NULL,                                         .nb_function                = UNAME##_API_ID_NB_FUNCTION,                   .name                       = DOMAIN_STR(UNAME),                            .lib_path_envname           = DOMAIN_STR(UNAME) "_LIB_PATH",                .filter_type_envname        = DOMAIN_STR(UNAME) "_FILTER_TYPE",             .functions_filtered_envname = DOMAIN_STR(UNAME) "_FUNCTIONS_FILTERED",      .get_funame_by_id           = (const char* (*) (mpi_api_id_t id)) get_##LNAME##_funame_by_id,          .get_funid_by_name          = (ratelprof_api_id_t (*) (const char* name)) get_##LNAME##_funid_by_name,        .get_funaddr_by_id          = (void* (*) (mpi_api_id_t id)) get_##LNAME##_funaddr_by_id            }
+
+/* Interposed domain exposed under another public name (NCCL uses the RCCL tables). */
+#define DEFINE_DOMAIN_AS(PUBNAME, UNAME, LNAME) {                               .api_table_addr             = &LNAME##_api_table,                           .nb_function                = UNAME##_API_ID_NB_FUNCTION,                   .name                       = DOMAIN_STR(PUBNAME),                          .lib_path_envname           = DOMAIN_STR(PUBNAME) "_LIB_PATH",              .filter_type_envname        = DOMAIN_STR(PUBNAME) "_FILTER_TYPE",           .functions_filtered_envname = DOMAIN_STR(PUBNAME) "_FUNCTIONS_FILTERED",    .get_funame_by_id           = (const char* (*) (mpi_api_id_t id)) get_##LNAME##_funame_by_id,          .get_funid_by_name          = (ratelprof_api_id_t (*) (const char* name)) get_##LNAME##_funid_by_name,        .get_funaddr_by_id          = (void* (*) (mpi_api_id_t id)) get_##LNAME##_funaddr_by_id            }
 
 extern ratelprof_domain_class_t domains_data[RATELPROF_NB_DOMAIN];
 

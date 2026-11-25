@@ -19,7 +19,7 @@ return function (report)
     report.HEADER = {
         "###", "Wall Time ("..timeunit..")", 
         "CPU Profiled Time (%)", "Non-Profiled (%)", "Interaction w/ GPU Time (%)",
-        "HIP Active Time (%)", "OMP Active Time (%)", "MPI Active Time (%)",
+        ratelprof.consts.GPU_RUNTIME_LABEL .. " Active Time (%)", "OMP Active Time (%)", "MPI Active Time (%)",
     }
 
     report.LOOP_IN = { ratelprof.consts.DOMAIN_HIP_ID, ratelprof.consts.DOMAIN_MPI_ID,
