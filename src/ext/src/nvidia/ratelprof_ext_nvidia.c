@@ -12,6 +12,7 @@
 
 #include <ratelprof.h>
 #include "ratelprof_ext.h"
+#include "ratelprof/ratelprof_static_hooks.h"
 #include "ratelprof_internal.h"
 #include "ratelprof_ext/ratelprof_cupti.h"
 #include "memory_structure/cht.h"
@@ -143,11 +144,15 @@ ratelprof_status_t ratelprof_start(void)
 {
     ratelprof_status_t status = __ratelprof_start_impl();
     if (status != RATELPROF_STATUS_SUCCESS) return status;
-    return ratelprof_cupti_start();
+    status = ratelprof_cupti_start();
+    /* Functions LD_PRELOAD cannot reach: static copies, plugins, dlsym users. */
+    ratelprof_static_hooks_activate();
+    return status;
 }
 
 ratelprof_status_t ratelprof_stop(void)
 {
+    ratelprof_static_hooks_deactivate();
     ratelprof_cupti_stop();
     return __ratelprof_stop_impl();
 }
@@ -189,6 +194,7 @@ ratelprof_status_t ratelprof_enable_domain(ratelprof_domain_t domain)
                 LOG(LOG_LEVEL_WARN, "Domain '%s' is not available in this build.\n", ratelprof_get_domain_name(domain));
                 return RATELPROF_STATUS_SUCCESS;
             }
+            ratelprof_static_hooks_domain_enabled((int)domain, true);
             return __ratelprof_enable_domain_impl(domain);
     }
 }
@@ -208,6 +214,7 @@ ratelprof_status_t ratelprof_disable_domain(ratelprof_domain_t domain)
         case RATELPROF_DOMAIN_OMP_REGION:
             return RATELPROF_STATUS_SUCCESS;
         default:
+            ratelprof_static_hooks_domain_enabled((int)domain, false);
             return __ratelprof_disable_domain_impl(domain);
     }
 }

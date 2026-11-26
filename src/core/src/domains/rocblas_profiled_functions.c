@@ -13,13 +13,13 @@
 
 #define CALL(func, ...) { \
     __rocblas_activity->start_time = ratelprof_get_clock_now(); \
-	((__##func##_t)rocblas_api_table.api_fn[ROCBLAS_API_ID_##func])(__VA_ARGS__); \
+	((__##func##_t)RATELPROF_API_FN(rocblas_api_table, ROCBLAS_API_ID_##func, #func))(__VA_ARGS__); \
     __rocblas_activity->stop_time = ratelprof_get_clock_now(); \
 };
 
 #define CALL_RET(ret_type, func, ...) \
     __rocblas_activity->start_time = ratelprof_get_clock_now(); \
-	ret_type __rocblas_ret = (ret_type)((__##func##_t)rocblas_api_table.api_fn[ROCBLAS_API_ID_##func])(__VA_ARGS__); \
+	ret_type __rocblas_ret = (ret_type)((__##func##_t)RATELPROF_API_FN(rocblas_api_table, ROCBLAS_API_ID_##func, #func))(__VA_ARGS__); \
     __rocblas_activity->stop_time = ratelprof_get_clock_now(); \
 	args_##func##_t* __args = (args_##func##_t*)__rocblas_activity->args; \
 	__args->retval = (ret_type)__rocblas_ret; 

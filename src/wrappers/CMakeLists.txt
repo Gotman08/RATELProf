@@ -3,6 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 FILE(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
 IF(RATELPROF_GPU_VENDOR STREQUAL "NVIDIA")
+    LIST(APPEND SOURCES "${RATELPROF_NV_GEN_DIR}/omp_tgt_rtl_methods.c")
     # CUDA Runtime/Driver are traced with CUPTI callbacks (no interposition) and
     # NVTX through the CUPTI NVTX injection.
     LIST(FILTER SOURCES EXCLUDE REGEX "/(hip|hsa|rocblas|roctx)_wrapper\.c$")

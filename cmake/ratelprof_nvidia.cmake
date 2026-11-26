@@ -95,6 +95,23 @@ IF(RATELPROF_BUILD_CUBLAS AND EXISTS "${RATELPROF_CUDA_INCLUDE_DIR}/cublas_api.h
     ENDIF()
 ENDIF()
 
+# ---- libomptarget >= 19 plugin method adapters (omp-target domain) ----------
+EXECUTE_PROCESS(
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/src/nvidia/gen/gen_omp_tgt_methods.py"
+            --wrapper "${CMAKE_SOURCE_DIR}/src/wrappers/omp_tgt_rtl_wrapper.c" --out "${RATELPROF_NV_GEN_DIR}"
+    RESULT_VARIABLE _omp_res
+    OUTPUT_VARIABLE _omp_out
+    ERROR_VARIABLE  _omp_err)
+IF(NOT _omp_res EQUAL 0)
+    MESSAGE(FATAL_ERROR "NVIDIA backend: omp-target method adapters generation failed:
+${_omp_out}
+${_omp_err}")
+ENDIF()
+MESSAGE(STATUS "${_omp_out}")
+SET_PROPERTY(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/src/nvidia/gen/gen_omp_tgt_methods.py"
+    "${CMAKE_SOURCE_DIR}/src/wrappers/omp_tgt_rtl_wrapper.c")
+
 SET(RATELPROF_NV_INCLUDE_DIRS
     "${RATELPROF_NV_GEN_DIR}"
     "${RATELPROF_CUPTI_INCLUDE_DIR}"

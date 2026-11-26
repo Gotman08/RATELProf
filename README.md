@@ -147,8 +147,37 @@ each API call keeps its call site in the application (also through a statically 
 sizes, registers, static/dynamic shared memory, local memory, launch type and cache config.
 
 Environment variables: `RATELPROF_CUPTI_BUFFER_SIZE` (activity buffer size, default 8 MiB),
-`RATELPROF_CUDA_CALLSITE=0` (disable call-site resolution), `RATELPROF_LLVM_LIB` (directory of
-`libomptarget.rtl.cuda.so` for `omp-target`).
+`RATELPROF_CUDA_CALLSITE=0` (disable call-site resolution), `RATELPROF_STATIC_HOOKS=0` (disable
+in-memory interception, see below), `RATELPROF_STATIC_HOOKS_VERBOSE=1` (list what is intercepted).
+
+### Statically linked libraries and functions LD_PRELOAD cannot reach
+
+LD_PRELOAD only sees calls resolved by the dynamic linker. The CUDA runtime/driver and NVTX do not
+depend on it (CUPTI callbacks also cover a statically linked `cudart`), but the other domains do.
+RATELProf completes the interposition at start-up, for every enabled domain:
+
+- **Static copies** (`libcublas_static.a`, `libnccl_static.a`, MPI or OpenMP linked statically,
+  hidden copies inside a shared library): the symbol tables (`.symtab`, `.dynsym`) of the loaded
+  objects are scanned and these functions are **patched in memory** to enter the RATELProf
+  wrappers. Each patched definition keeps its own implementation (a trampoline running its
+  relocated first instructions), so a static copy and a shared library of the same API coexist.
+- **libomptarget plugins**: the `__tgt_rtl_*` entry points (LLVM ≤ 18, even when resolved before
+  RATELProf starts) and the `GenericPluginTy::*` C++ methods of LLVM ≥ 19 (plugins linked into
+  `libomptarget.so`) are patched; methods are matched by demangled signature.
+- **dlopen/dlsym users** (ctypes, cupy, plugins loaded on demand): `dlsym(handle, ...)` returns a
+  stub entering the wrapper with the implementation dlsym found.
+- **Libraries loaded later** (including with `RTLD_LOCAL`): new objects are scanned when they appear
+  and unresolved functions are resolved again on their first call.
+
+The patching engine (`src/core/src/ratelprof/ratelprof_hook.c`) supports aarch64 and x86_64:
+branch to a jump island (`b` ±128 MiB / `adrp` ±4 GiB / absolute jump on aarch64, `jmp rel32` /
+absolute jump on x86_64), relocation of PC-relative instructions (ADR/ADRP, literal loads,
+B/BL/B.cond/CBZ/TBZ, RIP-relative operands, jcc/jmp/call), BTI and pointer-authentication
+prologues (`bti c`, `paciasp`) and CET `endbr64`. It refuses to patch when a branch of the function
+targets the overwritten instructions. `tests/hook_unit/run.sh` checks it on 11 functions with
+varied prologues (stack arguments, floats, loops, calls, tail calls, recursion, PC/RIP-relative
+data) for 5 compilation flag sets x PIE/non-PIE x 3 patch modes, on aarch64 (incl. BTI+PAC) and
+x86_64 (incl. CET).
 
 ### Inspect
 
@@ -166,25 +195,34 @@ listings.
 
 On the ROMEO supercomputer (NVIDIA GH200, Hopper sm_90, aarch64): CUDA 12.6.3 and 13.1.1,
 multi-stream/event app, cuBLAS + NCCL + NVTX on 2 GPUs, MPI + CUDA (OpenMPI, 2 ranks),
-OpenMP offload with LLVM 16 and 19. `inspect` was validated on 141 kernel images from sm_50 to
+OpenMP offload with LLVM 16 and 19 (`omp-target` included), statically linked cuBLAS (CUDA 12.6
+and 13.1) and NCCL, cuBLAS used through dlopen/dlsym and from a library loaded at run time.
+The x86_64 build was compiled (no NVIDIA GPU node of that architecture on ROMEO) and its patching
+engine unit-tested. `inspect` was validated on 141 kernel images from sm_50 to
 sm_120 (compared against `cuobjdump -res-usage` / `cuobjdump -elf`). CUPTI itself supports
 Maxwell and later GPUs; profiling has only been run on Hopper so far.
 
 ### Known limitations
 
-- No hardware counters / PC sampling yet (CUPTI Range Profiler / PC Sampling APIs are not wired).
-- `omp-target` intercepts the `__tgt_rtl_*` plugin interface that libomptarget `dlopen`s. Upstream
-  LLVM ≥ 19 links its plugins statically and no longer has that interface; LLVM 16 resolves it in
-  a constructor that runs before RATELProf's. Use `omp-region` + `cuda-driver` there.
-  OMPT target-region callbacks require LLVM ≥ 17.
-- Ranges a library pushes but never pops (NCCL's `ncclCommInitAll` range) are not reported.
+- No hardware counters / PC sampling yet (CUPTI Range Profiler / PC Sampling APIs are not wired;
+  hardware counters are also work in progress in upstream RATELProf).
+- OMPT target-region callbacks (`omp-region`) require an LLVM whose libomptarget emits them
+  (LLVM ≥ 17); `omp-target` works with LLVM 16 and 19.
+- In-memory interception needs the symbol of the function: a static copy inside a fully stripped
+  binary (no `.symtab`, not exported) cannot be found. x86_64 functions shorter than 5 bytes
+  without alignment padding after them (typical of `-Os`) cannot be patched.
+- A range that a library pushes and never pops (NCCL's `ncclCommInitAll`) is closed when the API
+  call that contains it returns.
 
 ### Fixes in shared code
 
 The port also fixes issues that affect the AMD build: NCCL/RCCL `stream` arguments truncated to
 `int`, uninitialized agent count in object tracking, interposition wrappers called before their
 API table is populated (crash with OMPT under LLVM 16), `ratelprof.fs.concat_path` not defined in
-`inspect`, aarch64 timer (`cntvct_el0`) and glibc `dlsym` symbol versions.
+`inspect`, aarch64 timer (`cntvct_el0`), glibc `dlsym` symbol versions, `dlsym(RTLD_NEXT)`
+answered relative to RATELProf instead of the caller (infinite loop in libomp), the decoder
+looping forever on a missing or self-referencing parent event, and libraries loaded after start-up
+calling into unresolved functions (fatal error).
 
 ##  Comparison with ROCprof v3
 

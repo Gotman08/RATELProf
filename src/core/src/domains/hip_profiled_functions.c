@@ -12,13 +12,13 @@
 
 #define CALL(func, ...) { \
     __hip_activity->start_time = ratelprof_get_clock_now(); \
-	((__##func##_t)hip_api_table.api_fn[HIP_API_ID_##func])(__VA_ARGS__); \
+	((__##func##_t)RATELPROF_API_FN(hip_api_table, HIP_API_ID_##func, #func))(__VA_ARGS__); \
     __hip_activity->stop_time = ratelprof_get_clock_now(); \
 };
 
 #define CALL_RET(ret_type, func, ...) \
     __hip_activity->start_time = ratelprof_get_clock_now(); \
-	ret_type __hip_ret = (ret_type)((__##func##_t)hip_api_table.api_fn[HIP_API_ID_##func])(__VA_ARGS__); \
+	ret_type __hip_ret = (ret_type)((__##func##_t)RATELPROF_API_FN(hip_api_table, HIP_API_ID_##func, #func))(__VA_ARGS__); \
     __hip_activity->stop_time = ratelprof_get_clock_now(); \
 	args_##func##_t* __args = (args_##func##_t*)__hip_activity->args; \
 	__args->retval = (ret_type)__hip_ret; 

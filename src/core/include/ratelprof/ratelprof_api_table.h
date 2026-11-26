@@ -299,7 +299,45 @@ void fallback(void);
  */
 void* ratelprof_api_next_symbol(const char* funame);
 
-/** Active function pointer of an API table entry, safe before population. */
-#define RATELPROF_API_PTR(table, id, funame)     (__builtin_expect((table).is_populate, 1) ? (table).api_ptr[id] : ratelprof_api_next_symbol(funame))
+/**
+ * @brief Resolve again an entry whose implementation was not found at start-up
+ * (library loaded later, or a static copy in a newly loaded object).
+ */
+void* ratelprof_api_resolve_late(ratelprof_api_table_t* api_table, ratelprof_api_id_t id, const char* funame);
+
+#include "ratelprof/ratelprof_hook.h"
+
+/**
+ * @brief Function a wrapper must call (interposition entry point).
+ *
+ * - before population: the next definition (RTLD_NEXT);
+ * - traced entry: the profiled function, which then uses RATELPROF_API_FN;
+ * - untraced entry: the implementation, i.e. the one designated by the jump
+ *   island that led here (in-memory interception), else the table's one.
+ */
+static inline void* ratelprof_api_ptr_of(ratelprof_api_table_t* t, ratelprof_api_id_t id, const char* funame)
+{
+    if (__builtin_expect(!t->is_populate, 0)) return ratelprof_api_next_symbol(funame);
+    void* p = t->api_ptr[id];
+    if (p == t->api_fn[id]) {
+        void* impl = ratelprof_hook_take();
+        if (impl) return impl;
+        if (__builtin_expect(p == (void*)fallback, 0)) p = ratelprof_api_resolve_late(t, id, funame);
+    }
+    return p;
+}
+
+/** @brief Implementation a profiled function must call (see ratelprof_api_ptr_of). */
+static inline void* ratelprof_api_fn_of(ratelprof_api_table_t* t, ratelprof_api_id_t id, const char* funame)
+{
+    void* impl = ratelprof_hook_take();
+    if (impl) return impl;
+    void* f = t->api_fn[id];
+    if (__builtin_expect(f == (void*)fallback, 0)) f = ratelprof_api_resolve_late(t, id, funame);
+    return f;
+}
+
+#define RATELPROF_API_PTR(table, id, funame) ratelprof_api_ptr_of(&(table), (id), (funame))
+#define RATELPROF_API_FN(table, id, funame)  ratelprof_api_fn_of(&(table), (id), (funame))
 
 #endif // RATELPROF_API_TABLE_H

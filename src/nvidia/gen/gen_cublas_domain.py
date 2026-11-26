@@ -181,11 +181,11 @@ def gen_profiled(funcs):
          "#include <stdlib.h>", "#include \"ratelprof.h\"", "#include \"cublas_api_helper.h\"", "",
          "#define CALL(func, ...) { \\",
          "    __cublas_activity->start_time = ratelprof_get_clock_now(); \\",
-         "    ((__##func##_t)cublas_api_table.api_fn[CUBLAS_API_ID_##func])(__VA_ARGS__); \\",
+         "    ((__##func##_t)RATELPROF_API_FN(cublas_api_table, CUBLAS_API_ID_##func, #func))(__VA_ARGS__); \\",
          "    __cublas_activity->stop_time = ratelprof_get_clock_now(); \\", "};", "",
          "#define CALL_RET(ret_type, func, ...) \\",
          "    __cublas_activity->start_time = ratelprof_get_clock_now(); \\",
-         "    ret_type __cublas_ret = (ret_type)((__##func##_t)cublas_api_table.api_fn[CUBLAS_API_ID_##func])(__VA_ARGS__); \\",
+         "    ret_type __cublas_ret = (ret_type)((__##func##_t)RATELPROF_API_FN(cublas_api_table, CUBLAS_API_ID_##func, #func))(__VA_ARGS__); \\",
          "    __cublas_activity->stop_time = ratelprof_get_clock_now(); \\",
          "    ((args_##func##_t*)__cublas_activity->args)->retval = __cublas_ret;", ""]
     for name, ret, params in funcs:

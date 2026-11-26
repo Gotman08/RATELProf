@@ -12,13 +12,13 @@
 
 #define CALL(func, ...) { \
     __hsa_activity->start_time = ratelprof_get_clock_now(); \
-	((__##func##_t)hsa_api_table.api_fn[HSA_API_ID_##func])(__VA_ARGS__); \
+	((__##func##_t)RATELPROF_API_FN(hsa_api_table, HSA_API_ID_##func, #func))(__VA_ARGS__); \
     __hsa_activity->stop_time = ratelprof_get_clock_now(); \
 };
 
 #define CALL_RET(ret_type, func, ...) \
     __hsa_activity->start_time = ratelprof_get_clock_now(); \
-	ret_type __hsa_ret = (ret_type)((__##func##_t)hsa_api_table.api_fn[HSA_API_ID_##func])(__VA_ARGS__); \
+	ret_type __hsa_ret = (ret_type)((__##func##_t)RATELPROF_API_FN(hsa_api_table, HSA_API_ID_##func, #func))(__VA_ARGS__); \
     __hsa_activity->stop_time = ratelprof_get_clock_now(); \
 	args_##func##_t* __args = (args_##func##_t*)__hsa_activity->args; \
 	__args->retval = (ret_type)__hsa_ret; 

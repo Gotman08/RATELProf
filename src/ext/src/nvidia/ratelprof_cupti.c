@@ -40,6 +40,7 @@
 #include <ratelprof.h>
 #include "ratelprof_ext.h"
 #include "ratelprof_ext/ratelprof_cupti.h"
+#include "ratelprof/ratelprof_static_hooks.h"
 #include "memory_structure/cht.h"
 
 #include "cupti_records.h"
@@ -499,6 +500,10 @@ static void rp_on_nvtx(CUpti_CallbackId cbid, const CUpti_NvtxData* d)
 static void rp_on_resource(CUpti_CallbackId cbid, const CUpti_ResourceData* r)
 {
     if (!r) return;
+    /* Libraries are often loaded right before a context or a module appears:
+     * look for new objects to intercept (cheap when nothing was loaded). */
+    if (cbid == CUPTI_CBID_RESOURCE_CONTEXT_CREATED || cbid == CUPTI_CBID_RESOURCE_MODULE_LOADED)
+        ratelprof_static_hooks_rescan();
     if (cbid == CUPTI_CBID_RESOURCE_CONTEXT_CREATED) {
         uint32_t ctx_id = 0, dev = 0;
         if (cuptiGetContextId(r->context, &ctx_id) == CUPTI_SUCCESS &&

@@ -12,13 +12,13 @@
 
 #define CALL(func, ...) { \
     __omp_routine_activity->start_time = ratelprof_get_clock_now(); \
-	((__##func##_t)omp_routine_api_table.api_fn[OMP_ROUTINE_API_ID_##func])(__VA_ARGS__); \
+	((__##func##_t)RATELPROF_API_FN(omp_routine_api_table, OMP_ROUTINE_API_ID_##func, #func))(__VA_ARGS__); \
     __omp_routine_activity->stop_time = ratelprof_get_clock_now(); \
 };
 
 #define CALL_RET(ret_type, func, ...) \
     __omp_routine_activity->start_time = ratelprof_get_clock_now(); \
-	ret_type __omp_routine_ret = (ret_type)((__##func##_t)omp_routine_api_table.api_fn[OMP_ROUTINE_API_ID_##func])(__VA_ARGS__); \
+	ret_type __omp_routine_ret = (ret_type)((__##func##_t)RATELPROF_API_FN(omp_routine_api_table, OMP_ROUTINE_API_ID_##func, #func))(__VA_ARGS__); \
     __omp_routine_activity->stop_time = ratelprof_get_clock_now(); \
 	args_##func##_t* __args = (args_##func##_t*)__omp_routine_activity->args; \
 	__args->retval = (ret_type)__omp_routine_ret; 

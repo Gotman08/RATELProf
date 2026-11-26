@@ -12,6 +12,98 @@
 
 #include "ratelprof.h"
 
+#ifdef RATELPROF_VENDOR_NVIDIA
+#include "ratelprof/ratelprof_static_hooks.h"
+
+/*
+ * dlsym(RTLD_NEXT, ...) is relative to the object calling dlsym: glibc finds it
+ * from the return address. It must therefore reach the real dlsym through a
+ * genuine tail call, with the caller's return address untouched (libomp, for
+ * instance, resolves omp_get_num_devices with RTLD_NEXT: answered relative to
+ * RATELProf, it would find itself again and loop forever). This entry point is
+ * written in assembly so that the tail call does not depend on the compiler.
+ *
+ * Other handles go through rp_dlsym_c: symbols of traced domains resolved with
+ * dlsym(handle) (ctypes, cupy, plugins loaded on demand...) are routed to the
+ * RATELProf wrappers through stubs.
+ */
+typedef void* (*rp_dlsym_fn_t)(void*, const char*);
+__attribute__((visibility("hidden"))) rp_dlsym_fn_t rp_real_dlsym_ptr = NULL;
+
+__attribute__((visibility("hidden"), used)) void* rp_resolve_real_dlsym(void)
+{
+  if (!rp_real_dlsym_ptr) {
+    static const char* versions[] = { "GLIBC_2.34", "GLIBC_2.17", "GLIBC_2.2.5", "GLIBC_2.0", NULL };
+    for (int i = 0; versions[i] && !rp_real_dlsym_ptr; i++)
+      rp_real_dlsym_ptr = (rp_dlsym_fn_t)dlvsym(RTLD_NEXT, "dlsym", versions[i]);
+  }
+  return (void*)rp_real_dlsym_ptr;
+}
+
+__attribute__((visibility("hidden"), used)) void* rp_dlsym_c(void *handle, const char *symbol, void* caller) {
+  void* real = ratelprof_real_dlsym(handle, symbol);
+  return ratelprof_static_hooks_dlsym(handle, symbol, real, caller);
+}
+
+#if defined(__aarch64__)
+__asm__(
+  "  .text\n"
+  "  .globl dlsym\n"
+  "  .type dlsym, %function\n"
+  "  .p2align 2\n"
+  "dlsym:\n"
+  "  hint #34\n"                          /* bti c */
+  "  cmn x0, #1\n"                        /* handle == RTLD_NEXT ? */
+  "  b.ne 2f\n"
+  "  adrp x16, rp_real_dlsym_ptr\n"
+  "  ldr x16, [x16, :lo12:rp_real_dlsym_ptr]\n"
+  "  cbnz x16, 1f\n"
+  "  stp x29, x30, [sp, #-32]!\n"
+  "  stp x0, x1, [sp, #16]\n"
+  "  bl rp_resolve_real_dlsym\n"
+  "  mov x16, x0\n"
+  "  ldp x0, x1, [sp, #16]\n"
+  "  ldp x29, x30, [sp], #32\n"
+  "1:\n"
+  "  br x16\n"                            /* tail call: LR is the caller's */
+  "2:\n"
+  "  mov x2, x30\n"                       /* caller */
+  "  b rp_dlsym_c\n"
+  "  .size dlsym, .-dlsym\n"
+);
+#elif defined(__x86_64__)
+__asm__(
+  "  .text\n"
+  "  .globl dlsym\n"
+  "  .type dlsym, @function\n"
+  "  .p2align 4\n"
+  "dlsym:\n"
+  "  endbr64\n"
+  "  cmpq $-1, %rdi\n"                    /* handle == RTLD_NEXT ? */
+  "  jne 2f\n"
+  "  movq rp_real_dlsym_ptr(%rip), %rax\n"
+  "  testq %rax, %rax\n"
+  "  jnz 1f\n"
+  "  pushq %rdi\n"
+  "  pushq %rsi\n"
+  "  subq $8, %rsp\n"
+  "  call rp_resolve_real_dlsym\n"
+  "  addq $8, %rsp\n"
+  "  popq %rsi\n"
+  "  popq %rdi\n"
+  "1:\n"
+  "  jmp *%rax\n"                         /* tail call: return address is the caller's */
+  "2:\n"
+  "  movq (%rsp), %rdx\n"                 /* caller */
+  "  jmp rp_dlsym_c\n"
+  "  .size dlsym, .-dlsym\n"
+);
+#else
+void* dlsym(void *handle, const char *symbol) {
+  return rp_dlsym_c(handle, symbol, __builtin_return_address(0));
+}
+#endif
+#else
 typedef void* (*__dlsym_t)(void *handle, const char *symbol);
 
 void* dlsym(void *handle, const char *symbol) {
@@ -36,3 +128,4 @@ void* dlsym(void *handle, const char *symbol) {
 
   return dlsym_fn(handle, symbol);
 }
+#endif
